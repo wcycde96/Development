@@ -1,0 +1,4474 @@
+<?xml version="1.0" encoding="EUC-KR"?>
+<!DOCTYPE sqlMap PUBLIC "-//ibatis.apache.org//DTD SQL Map 2.0//EN" "http://ibatis.apache.org/dtd/sql-map-2.dtd">
+
+<!-- 사용자  TB_FS_AMMEMBER -->
+<sqlMap namespace="ammember">
+   
+    <!-- ID 체크 -->
+    <select id="CHK_ID"  parameterClass="hmap" resultClass="long">
+        SELECT
+            COUNT(*) as CNT
+        FROM 
+            TB_FS_AMMEMBER
+        WHERE
+            MEMBER_NO = #member_no#
+    </select>
+    
+    <!-- PW 체크 -->
+    <select id="CHK_PW"  parameterClass="hmap" resultClass="long">
+        SELECT
+            COUNT(*) as CNT
+        FROM 
+            TB_FS_AMMEMBER
+        WHERE
+            MEMBER_NO = #member_no#
+        AND MEMBER_PW = XX1.ENC_VARCHAR2_INS(#member_pw#,10,'AJU_SHA')
+    </select>
+    
+    <!-- IP 체크 -->
+    <select id="CHK_IP"  parameterClass="hmap" resultClass="long">
+        SELECT
+            COUNT(*) as CNT
+        FROM 
+            TB_FS_AMMEMBER
+        WHERE
+            MEMBER_NO = #member_no#
+        AND MEMBER_PW = XX1.ENC_VARCHAR2_INS(#member_pw#,10,'AJU_SHA')
+        AND #member_ip# like '%'||MEMBER_IP||'%'
+    </select>
+    
+    <!-- STATE 체크 -->
+    <select id="CHK_ST"  parameterClass="hmap" resultClass="long">
+        SELECT
+            COUNT(*) as CNT
+        FROM 
+            TB_FS_AMMEMBER
+        WHERE
+            MEMBER_NO = #member_no#
+        AND MEMBER_PW = XX1.ENC_VARCHAR2_INS(#member_pw#,10,'AJU_SHA')
+        AND #member_ip# like '%'||MEMBER_IP||'%'
+        AND MEMBER_STATE = '01'
+    </select>
+    
+    <!-- 허용여부 체크 -->
+    <select id="CHK_ACCESS"  parameterClass="hmap" resultClass="long">
+        SELECT
+            COUNT(*) as CNT
+        FROM
+            TB_FS_AMMEMBER
+        WHERE
+            MEMBER_NO = #member_no#
+        AND LOGIN_ACCESS_YN = 'Y'
+    </select>
+    
+    <!-- 비밀번호 초기화 체크 -->
+    <select id="CHK_PW_INIT" parameterClass="hmap" resultClass="long">
+      	SELECT
+            COUNT(*) as CNT
+        FROM
+            TB_FS_AMMEMBER
+        WHERE
+            MEMBER_NO = #member_no#
+            AND PW_RESET_YN = 'N'
+    </select>
+    
+    <!-- 비밀번호 주기 체크-->
+    <select id="CHK_PW_CHK" parameterClass="hmap" resultClass="long">
+    	SELECT
+           TO_CHAR(SYSDATE, 'YYYYMMDD') - LPAD(PW_CHG_DT, 8) - (SELECT CODE_VAL1 FROM TB_FS_ZCCODE WHERE CODEGRP = 'PWDPD' AND CODE='01' AND USE_YN = 'Y')  AS CNT
+        FROM
+            TB_FS_AMMEMBER
+        WHERE
+            MEMBER_NO = #member_no#
+    </select>
+    
+     <!-- IFIS 비밀번호 주기 체크-->
+    <select id="CHK_IFIS_PW_CHK" parameterClass="hmap" resultClass="long">
+    	SELECT
+   			DECODE(IFIS_PW_CHG_DT, null, -30, TO_CHAR(SYSDATE, 'YYYYMMDD') - LPAD(IFIS_PW_CHG_DT, 8) - (SELECT CODE_VAL1 FROM TB_FS_ZCCODE WHERE CODEGRP = 'PWDPD' AND CODE='01' AND USE_YN = 'Y')) AS CNT
+        FROM
+            TB_FS_AMMEMBER
+        WHERE
+            MEMBER_NO = #member_no#
+    </select>
+    
+    <!-- 사용자 내선번호 변경 -->
+    <update id="update_agt_phone" parameterClass="hmap">
+        UPDATE 
+            TB_FS_AMMEMBER
+        SET 
+            AGT_PHONE = #agt_phone#         
+        WHERE 
+            MEMBER_NO = #member_no#
+    </update>
+    
+    <sql id="column_memeber_check">
+     A.MEMBER_NO
+            , A.MEMBER_NM
+            , #member_pw# as MEMBER_PW
+            , #member_ip# as MEMBER_IP
+            ,NVL((SELECT VIEW_TEAM FROM TB_FA_TEAM_MNG WHERE VIEW_MEMBER_NO = A.MEMBER_NO), 'none')AS TEAM_CODE
+            , A.ROLE_CD
+            , (SELECT ROLE_NM FROM TB_FS_AMROLE WHERE ROLE_CD = A.ROLE_CD) AS ROLE_NM
+			, MEMBER_STATE            
+            , BANK_CD
+            , UF_CodeName ('001',BANK_CD) BANK_NM
+            , BRANCH_CD
+            , UF_CodeName ('002',BRANCH_CD) BRANCH_NM
+            , A.POSITION
+            , UF_CodeName ('007',POSITION) POSITION_NM
+            , DEPT_CD
+            , UF_CodeName ('015',DEPT_CD) DEPT_NM
+            , DEPT_JOB
+            , MOBILE_NO          
+            , AGT_STAT
+            , UF_CodeName ('931',AGT_STAT) AGT_STAT_NM
+            , AGT_STAT_DATE
+            , AGT_ROLE
+            , UF_CodeName ('932',AGT_ROLE) AGT_ROLE_NM
+            , AGT_GROUP
+            , AGT_CTI
+            , AGT_PHONE
+            , AGT_EXCEL
+            , AGT_ASSIGN
+            , TO_CHAR(sysdate, 'HH24') || ':' || 
+              TO_CHAR(sysdate, 'MI') || ':' || 
+              TO_CHAR(sysdate, 'SS') AS LOGIN_TIME
+            , (SELECT 
+                    SERVICE_CD 
+               FROM (
+                    SELECT 
+                        * 
+                    FROM 
+                        TB_FS_AMSERVICE 
+                    WHERE 
+                        SERVICE_CD IN 
+                        (
+                            SELECT 
+                                SERVICE_CD 
+                            FROM 
+                                TB_FS_AMROLE_SERVICE 
+                            WHERE 
+                                ROLE_CD = 
+                                (
+                                    SELECT 
+                                        ROLE_CD 
+                                    FROM 
+                                        TB_FS_AMMEMBER 
+                                    WHERE 
+                                        MEMBER_NO = #member_no#
+                                 )
+                        )
+                    AND SERVICE_STEP = 1 
+                    ORDER BY 
+                        SERVICE_ORDER
+                ) WHERE ROWNUM=1
+                ) AS SERVICE
+               , UF_CRYD_NEW2(IFIS_PWD) AS IFIS_PWD
+               , NVL(IFIS_LOAN_YN,'N') IFIS_LOAN_YN
+               , NVL(IFIS_DAILY_YN,'N') IFIS_DAILY_YN
+               , TERMINAL_NO
+               , uf_cryd_new(MEMBER_IDNO,'MEMBER_IDNO','TB_FS_AMMEMBER')  AS  MEMBER_IDNO
+               , SMS_TEL_NO1
+               , SMS_TEL_NO2
+               , SMS_TEL_NO3
+               , REC_TYPE
+               , (
+                    SELECT 
+                         a.SERVICE_CD
+                     FROM
+                         (            
+                         SELECT 
+                             SERVICE_NM
+                             , SERVICE_CD
+                             , SERVICE_ACT
+                             , SERVICE_STEP
+                             , SERVICE_REF
+                        FROM 
+                            TB_FS_AMSERVICE
+                        START WITH 
+                            SERVICE_STEP = 1
+                        CONNECT BY PRIOR 
+                            SERVICE_CD = SERVICE_REF
+                        ORDER SIBLINGS BY 
+                            SERVICE_ORDER
+                        ) a
+                        , TB_FS_AMROLE_SERVICE b
+                    WHERE 
+                        a.SERVICE_CD = b.SERVICE_CD
+                    AND b.ROLE_CD = (
+                                                SELECT 
+                                                    ROLE_CD 
+                                                FROM 
+                                                    TB_FS_AMMEMBER 
+                                                WHERE 
+                                                    MEMBER_NO = #member_no#
+                                             )
+                    AND a.SERVICE_STEP = 3
+                    and rownum=1
+              ) SERVICE_CD
+              , CAMPAUTH
+              , IFIS_PWD_HASH
+              , IFIS_USE_CODE
+              , NVL(INQUIRY_ROLE, '0') AS INQUIRY_ROLE  
+    </sql>
+    
+    <!-- 로그인 체크 -->
+    <select id="member_check"  parameterClass="hmap" resultClass="ammemberInfo">
+        SELECT 
+            <include refid="column_memeber_check"/>
+            , 'A' AS ACCESS_TYPE
+        FROM 
+            TB_FS_AMMEMBER A
+        WHERE 
+            MEMBER_NO = #member_no#
+        AND MEMBER_PW = XX1.ENC_VARCHAR2_INS(#member_pw#,10,'AJU_SHA')
+        AND #member_ip# like '%'||MEMBER_IP||'%'
+        AND MEMBER_STATE = '01'
+        AND ACCESS_YN = 'Y'
+    </select>
+    
+    
+     <!-- 로그인 체크_콜센터-->
+    <select id="member_check_call"  parameterClass="hmap" resultClass="ammemberInfo">
+        SELECT 
+            <include refid="column_memeber_check"/>
+            , 'C' AS ACCESS_TYPE
+        FROM 
+            TB_FS_AMMEMBER A
+        WHERE 
+            MEMBER_NO = #member_no#
+        <!-- AND MEMBER_PW = XX1.ENC_VARCHAR2_INS(#member_pw#,10,'AJU_SHA')
+        AND #member_ip# like '%'||MEMBER_IP||'%'  -->
+        AND MEMBER_STATE = '01'
+    </select>
+    
+    <!-- 공통 조건 -->
+    <sql id="common_WHERE">        
+        <isNotEmpty prepend="AND" property="member_no"		> MEMBER_NO like '%'||#member_no#||'%'	</isNotEmpty>
+        <isNotEmpty prepend="AND" property="member_nm"		> MEMBER_NM like '%'||#member_nm#||'%'	</isNotEmpty>
+        <isNotEmpty prepend="AND" property="role_cd"		> ROLE_CD = #role_cd#					</isNotEmpty>
+        <isNotEmpty prepend="AND" property="position"		> POSITION = #position#					</isNotEmpty>
+        <isNotEmpty prepend="AND" property="dept_cd"		> DEPT_CD = #dept_cd#					</isNotEmpty>
+    </sql>
+    
+    <!-- 사용자 전체 목록 -->
+    <select id="list"  parameterClass="hmap" resultClass="hmap">
+    	SELECT 
+            *
+        FROM ( 
+            SELECT
+                e.*, 
+                ROWNUM as RNUM
+            FROM (
+		        SELECT 
+		            MEMBER_NO
+		        	, ROLE_CD
+			        , FN_ROLE_NM(ROLE_CD) AS ROLE_NM
+		        	, MEMBER_NM
+		        	, MEMBER_STATE
+		            , FN_ZCODE_NM('S03',MEMBER_STATE) MEMBER_STATE_NM 
+		        	, BANK_CD
+		            , UF_CodeName ('001',BANK_CD) BANK_NM
+		        	, BRANCH_CD
+		            , UF_CodeName ('002',BRANCH_CD) BRANCH_NM
+		        	, POSITION
+		            , UF_CodeName ('007',POSITION) POSITION_NM
+		        	, DEPT_CD
+		            , UF_CodeName ('015',DEPT_CD) DEPT_NM
+		        	, DEPT_JOB
+		        	, MOBILE_NO
+		        	, MEMBER_IP            
+		        	, AGT_STAT
+		            , UF_CodeName ('931',AGT_STAT) AGT_STAT_NM
+		        	, AGT_STAT_DATE
+		        	, AGT_ROLE
+		            , UF_CodeName ('932',AGT_ROLE) AGT_ROLE_NM
+		        	, AGT_GROUP
+		            , UF_CodeName ('934',AGT_GROUP) as AGT_GROUP_NM
+		        	, AGT_CTI
+		        	, AGT_PHONE
+		        	, AGT_EXCEL
+		        	, AGT_ASSIGN
+		        	, UF_CRYD_NEW2(IFIS_PWD) AS IFIS_PWD
+		            , NVL(IFIS_LOAN_YN,'N') IFIS_LOAN_YN
+		            , NVL(IFIS_DAILY_YN,'N') IFIS_DAILY_YN 
+		            , TERMINAL_NO  
+		            , UF_CRYD_NEW2(MEMBER_IDNO) AS MEMBER_IDNO
+					, SMS_TEL_NO1
+					, SMS_TEL_NO2
+					, SMS_TEL_NO3
+					, REC_TYPE
+					, TEAM_CD
+					, CAMPAUTH
+					, IFIS_USE_CODE
+					, INQUIRY_ROLE
+		        FROM 
+		            TB_FS_AMMEMBER M
+		        WHERE
+		        	MEMBER_STATE = '01'
+		        <include refid="common_WHERE"/>
+		        
+             ) e
+            WHERE            
+                ROWNUM  <![CDATA[<]]>= #END_ROW#
+        )
+        WHERE
+            RNUM <![CDATA[>]]>= #BEGIN_ROW#
+    </select>
+    
+    <!-- 전체 신청 목록  건수 -->
+    <select id="listCount"  parameterClass="hmap" resultClass="string">
+        SELECT
+            COUNT(*) AS value
+        FROM 
+		    TB_FS_AMMEMBER  
+		WHERE
+		       	MEMBER_STATE = '01'
+        <include refid="common_WHERE"/>
+        
+    </select>
+    
+    <select id="Detail" parameterClass="hmap" resultClass="hmap">
+    	SELECT
+			MEMBER_NO
+			, MEMBER_NM
+			, UF_CRYD_NEW2(MEMBER_IDNO) AS MEMBER_IDNO
+			, MEMBER_IP
+			, MEMBER_STATE
+			, FN_ZCODE_NM('S03',MEMBER_STATE) MEMBER_STATE_NM 
+			, POSITION
+			, UF_CodeName ('007',POSITION) POSITION_NM
+			, ROLE_CD
+			, FN_ROLE_NM(ROLE_CD) AS ROLE_NM
+			, BANK_CD
+			, UF_CodeName ('001',BANK_CD) BANK_NM
+			, BRANCH_CD
+			, UF_CodeName ('002',BRANCH_CD) BRANCH_NM
+			, DEPT_CD
+			, UF_CodeName ('015',DEPT_CD) DEPT_NM
+			, DEPT_JOB
+			, MOBILE_NO
+			, AGT_STAT
+			, UF_CodeName ('931',AGT_STAT) AGT_STAT_NM
+			, AGT_STAT_DATE
+			, AGT_ROLE
+			, UF_CodeName ('932',AGT_ROLE) AGT_ROLE_NM
+			, AGT_GROUP
+			, UF_CodeName ('934',AGT_GROUP) as AGT_GROUP_NM
+			, AGT_CTI
+			, AGT_PHONE
+			, AGT_EXCEL
+			, AGT_ASSIGN
+			, AGT_ETEL
+			, AGT_DTEL
+			, API_PHONE
+			, UF_CRYD_NEW2(IFIS_PWD) AS IFIS_PWD
+			, IFIS_DAILY_YN
+			, IFIS_LOAN_YN
+			, TERMINAL_NO
+			, SMS_TEL_NO1
+			, SMS_TEL_NO2
+			, SMS_TEL_NO3
+			, TEAM_CD
+			, CAMPAUTH
+			, IFIS_USE_CODE
+			, TO_CHAR(TO_DATE(PW_CHG_DT, 'YYYY-MM-DD HH24:MI:SS') , 'YYYY-MM-DD HH24:MI:SS' ) AS PW_CHG_DT
+			, PW_RESET_YN     
+			, TO_CHAR(TO_DATE(IFIS_PW_CHG_DT, 'YYYY-MM-DD HH24:MI:SS') , 'YYYY-MM-DD HH24:MI:SS' ) AS IFIS_PW_CHG_DT
+			, INQUIRY_ROLE
+			, TO_CHAR(TO_DATE(AGREE_PAPER_DT, 'YYYY-MM-DD HH24:MI:SS') , 'YYYY-MM-DD HH24:MI:SS' ) AS AGREE_PAPER_DT
+		FROM
+			TB_FS_AMMEMBER
+		WHERE 
+            MEMBER_NO = #member_no#	
+    </select>
+    
+    <!-- 사용자 등록 -->
+    <insert id="insert" parameterClass="hmap">
+         INSERT INTO TB_FS_AMMEMBER ( 
+        	MEMBER_NO
+        	, ROLE_CD
+        	, MEMBER_NM
+        	, MEMBER_PW
+        	, MEMBER_STATE
+        	, BANK_CD
+        	, BRANCH_CD
+        	, POSITION
+        	, DEPT_CD
+        	, DEPT_JOB
+        	, MOBILE_NO
+        	, MEMBER_IP
+        	, AGT_STAT
+        	, AGT_STAT_DATE
+        	, AGT_ROLE
+        	, AGT_GROUP
+        	, AGT_CTI
+        	, AGT_PHONE
+        	, AGT_EXCEL
+        	, AGT_ASSIGN
+        	, IFIS_PWD
+            , IFIS_LOAN_YN
+            , IFIS_DAILY_YN
+            , TERMINAL_NO 
+            , MEMBER_IDNO
+            , SMS_TEL_NO1
+			, SMS_TEL_NO2
+			, SMS_TEL_NO3
+			, TEAM_CD
+			, CAMPAUTH
+			, IFIS_PWD_HASH
+			, IFIS_USE_CODE
+			, LOGIN_ACCESS_YN
+			, ACCESS_YN
+			, CRE_DT
+			, INQUIRY_ROLE
+        ) VALUES (
+        	#member_no#
+        	, #role_cd#
+        	, #member_nm#
+        	, XX1.ENC_VARCHAR2_INS(#member_pw#,10,'AJU_SHA')
+        	, #member_state#
+        	, #bank_cd#
+        	, #branch_cd#
+        	, #position#
+        	, #dept_cd#
+        	, #dept_job#
+        	, #mobile_no#
+        	, #member_ip#
+        	, #agt_stat#
+        	, #agt_stat_date#
+        	, #agt_role#
+        	, #agt_group#
+        	, #agt_cti#
+        	, #agt_phone#
+        	, #agt_excel#
+        	, #agt_assign#
+        	, UF_CRYE_NEW2(#ifis_pwd#)
+        	, #ifis_loan_yn#
+        	, #ifis_daily_yn#
+        	, #terminal_no#
+        	, UF_CRYE_NEW(#member_idno#,'member_idno','tb_fs_ammember')
+        	, #sms_tel_no1#
+        	, #sms_tel_no2#
+        	, #sms_tel_no3#
+        	, #team_cd#
+        	, #campauth#
+        	, #ifis_pwd_hash#
+        	, #ifis_use_code#
+        	, #login_access_yn#
+        	, #access_yn#
+        	, TO_CHAR(SYSDATE,'YYYYMMDDHH24MISS')
+        	, #inquiry_role#
+        )
+    </insert>
+    
+    <update id="update" parameterClass="hmap">
+        UPDATE
+        	TB_FS_AMMEMBER
+        SET
+        	 MEMBER_NO = MEMBER_NO
+	         <isNotEmpty prepend="," property="member_nm">	MEMBER_NM = #member_nm#	</isNotEmpty>
+        	 <isNotEmpty prepend="," property="member_idno">	MEMBER_IDNO = XX1.ENC_VARCHAR2_INS(#member_pw#,10,'AJU_SHA')	</isNotEmpty>
+        	 <isNotEmpty prepend="," property="member_pw">	MEMBER_PW = XX1.ENC_VARCHAR2_INS(#member_pw#,10,'AJU_SHA')	</isNotEmpty>
+        	 <isNotEmpty prepend="," property="member_ip">	MEMBER_IP = #member_ip#	</isNotEmpty>
+        	 <isNotEmpty prepend="," property="member_state">	MEMBER_STATE = #member_state#	</isNotEmpty>
+        	 <isNotEmpty prepend="," property="position">	POSITION = #position#	</isNotEmpty>
+        	 <isNotEmpty prepend="," property="role_cd">	ROLE_CD = #role_cd#	</isNotEmpty>
+        	 <isNotEmpty prepend="," property="bank_cd">	BANK_CD = #bank_cd#	</isNotEmpty>
+        	 <isNotEmpty prepend="," property="branch_cd">	BRANCH_CD = #branch_cd#	</isNotEmpty>
+        	 <isNotEmpty prepend="," property="dept_cd">	DEPT_CD = #dept_cd#	</isNotEmpty>
+        	 <isNotEmpty prepend="," property="dept_job">	DEPT_JOB = #dept_job#	</isNotEmpty>
+        	 <isNotEmpty prepend="," property="mobile_no">	MOBILE_NO = #mobile_no#	</isNotEmpty>
+        	 <isNotEmpty prepend="," property="agt_stat">	AGT_STAT = #agt_stat#	</isNotEmpty>
+        	 <isNotEmpty prepend="," property="agt_stat_date">	AGT_STAT_DATE = #agt_stat_date#	</isNotEmpty>
+        	 <isNotEmpty prepend="," property="agt_role">	AGT_ROLE = #agt_role#	</isNotEmpty>
+        	 <isNotEmpty prepend="," property="agt_group">	AGT_GROUP = #agt_group#	</isNotEmpty>
+        	 <isNotEmpty prepend="," property="agt_cti">	AGT_CTI = #agt_cti#	</isNotEmpty>
+        	 <isNotEmpty prepend="," property="agt_phone">	AGT_PHONE = #agt_phone#	</isNotEmpty>
+        	 <isNotEmpty prepend="," property="agt_excel">	AGT_EXCEL = #agt_excel#	</isNotEmpty>
+        	 <isNotEmpty prepend="," property="agt_assign">	AGT_ASSIGN = #agt_assign#	</isNotEmpty>
+        	 <isNotEmpty prepend="," property="agt_etel">	AGT_ETEL = #agt_etel#	</isNotEmpty>
+        	 <isNotEmpty prepend="," property="agt_dtel">	AGT_DTEL = #agt_dtel#	</isNotEmpty>
+        	 <isNotEmpty prepend="," property="api_phone">	API_PHONE = #api_phone#	</isNotEmpty>
+        	 <isNotEmpty prepend="," property="ifis_pwd">	IFIS_PWD = UF_CRYE_NEW2(#ifis_pwd#)	</isNotEmpty>
+        	 <isNotEmpty prepend="," property="ifis_daily_yn">	IFIS_DAILY_YN = #ifis_daily_yn#	</isNotEmpty>
+        	 <isNotEmpty prepend="," property="ifis_loan_yn">	IFIS_LOAN_YN = #ifis_loan_yn#	</isNotEmpty>
+        	 <isNotEmpty prepend="," property="terminal_no">	TERMINAL_NO = #terminal_no#	</isNotEmpty>
+        	 <isNotEmpty prepend="," property="sms_tel_no1">	SMS_TEL_NO1 = #sms_tel_no1#	</isNotEmpty>
+        	 <isNotEmpty prepend="," property="sms_tel_no2">	SMS_TEL_NO2 = #sms_tel_no2#	</isNotEmpty>
+        	 <isNotEmpty prepend="," property="sms_tel_no3">	SMS_TEL_NO3 = #sms_tel_no3#	</isNotEmpty>
+        	 <isNotEmpty prepend="," property="team_cd">	TEAM_CD = #team_cd#	</isNotEmpty>
+        	 <isNotEmpty prepend="," property="campauth">	CAMPAUTH = #campauth#	</isNotEmpty>
+        	 <isNotEmpty prepend="," property="ifis_pwd_hash">	IFIS_PWD_HASH = #ifis_pwd_hash#	</isNotEmpty>
+        	 <isNotEmpty prepend="," property="ifis_use_code">	IFIS_USE_CODE = #ifis_use_code#	</isNotEmpty>
+        	 <isNotEmpty prepend="," property="login_access_yn">	LOGIN_ACCESS_YN = #login_access_yn#	</isNotEmpty>
+        	 <isNotEmpty prepend="," property="access_yn">	ACCESS_YN = #access_yn#	</isNotEmpty>
+        	 <isNotEmpty prepend="," property="inquiry_role">	INQUIRY_ROLE = #inquiry_role#	</isNotEmpty>
+        WHERE
+            MEMBER_NO = #member_no#
+    </update>
+    
+    <delete id="delete" parameterClass="hmap">
+        DELETE 
+        FROM
+            TB_FS_AMMEMBER
+        WHERE 
+            MEMBER_NO = #member_no#
+    </delete>
+    
+    <!-- 역할별 사용자 목록 -->
+    <select id="roleMemberList"  parameterClass="hmap" resultClass="hmap">
+        SELECT 
+            MEMBER_NO
+			, MEMBER_NM
+			, UF_CRYD_NEW2(MEMBER_IDNO) AS MEMBER_IDNO
+			, MEMBER_IP
+			, MEMBER_STATE
+			, FN_ZCODE_NM('S03',MEMBER_STATE) MEMBER_STATE_NM 
+			, POSITION
+			, UF_CodeName ('007',POSITION) POSITION_NM
+			, ROLE_CD
+			, FN_ROLE_NM(ROLE_CD) AS ROLE_NM
+			, BANK_CD
+			, UF_CodeName ('001',BANK_CD) BANK_NM
+			, BRANCH_CD
+			, UF_CodeName ('002',BRANCH_CD) BRANCH_NM
+			, DEPT_CD
+			, UF_CodeName ('015',DEPT_CD) DEPT_NM
+			, DEPT_JOB
+			, MOBILE_NO
+			, AGT_STAT
+			, UF_CodeName ('931',AGT_STAT) AGT_STAT_NM
+			, AGT_STAT_DATE
+			, AGT_ROLE
+			, UF_CodeName ('932',AGT_ROLE) AGT_ROLE_NM
+			, AGT_GROUP
+			, UF_CodeName ('934',AGT_GROUP) as AGT_GROUP_NM
+			, AGT_CTI
+			, AGT_PHONE
+			, AGT_EXCEL
+			, AGT_ASSIGN
+			, AGT_ETEL
+			, AGT_DTEL
+			, API_PHONE
+			, UF_CRYD_NEW2(IFIS_PWD) AS IFIS_PWD
+			, IFIS_DAILY_YN
+			, IFIS_LOAN_YN
+			, TERMINAL_NO
+			, SMS_TEL_NO1
+			, SMS_TEL_NO2
+			, SMS_TEL_NO3
+        FROM 
+            TB_FS_AMMEMBER M
+        WHERE 
+            ROLE_CD = #role_cd#
+    </select>
+    
+    <!-- 역할별 사용자 목록 : 근무상태 -->
+    <select id="roleMemberList_Y"  parameterClass="String" resultClass="hmap">
+        SELECT 
+            MEMBER_NO AS CODE
+			, MEMBER_NM AS NAME
+			, MEMBER_STATE AS STATE		 	
+        FROM 
+            TB_FS_AMMEMBER M
+        WHERE 
+            ROLE_CD = #value#
+            AND MEMBER_STATE = '01'
+    </select>
+    
+    <!-- 역할별 사용자 목록 -->
+    <select id="roleMemberList_N"  parameterClass="hmap" resultClass="hmap">
+        SELECT 
+            MEMBER_NO  
+			, MEMBER_NM  
+			, MEMBER_STATE
+			, AGT_ASSIGN  
+			, TEAM_CD
+			, FN_ZCODE_NM('VW3', TEAM_CD) AS TEAM_CD_NM	
+        FROM 
+            TB_FS_AMMEMBER M
+        WHERE 
+            ROLE_CD = #role_cd#
+            <isNotEmpty prepend="AND" property="member_state">	MEMBER_STATE = #member_state#	</isNotEmpty>
+            <isNull     prepend="AND" property="member_state">  MEMBER_STATE = '01'</isNull>
+            <isNotEmpty prepend="AND" property="agt_assign">	AGT_ASSIGN = #agt_assign#	</isNotEmpty>            
+            <isNotEmpty prepend="AND" property="team_cd">	TEAM_CD = #team_cd#	</isNotEmpty>
+            
+            <isNotNull prepend="ORDER BY" property="order1">  TEAM_CD, MEMBER_NM</isNotNull>            
+            <isNull prepend="ORDER BY" property="order1">  MEMBER_NM </isNull>
+                      
+    </select>
+    
+    <!-- 역할별 사용자 목록 -->
+    <select id="roleMemberList_N_2"  parameterClass="hmap" resultClass="hmap">
+        SELECT 
+            MEMBER_NO  
+			, MEMBER_NM  
+			, MEMBER_STATE
+			, AGT_ASSIGN  
+			, TEAM_CD
+			, FN_ZCODE_NM('VW3', TEAM_CD) AS TEAM_CD_NM	
+        FROM 
+            TB_FS_AMMEMBER M
+        WHERE 
+            (ROLE_CD = '29' or MEMBER_NO='201308')
+            ORDER BY ROLE_CD                    
+    </select>
+    
+    <!-- 역할별 사용자 목록 -->
+    <select id="roleMemberList_N_3"  parameterClass="hmap" resultClass="hmap">
+        SELECT 
+            MEMBER_NO  
+            , MEMBER_NM  
+            , MEMBER_STATE
+            , AGT_ASSIGN  
+            , TEAM_CD
+            , FN_ZCODE_NM('VW3', TEAM_CD) AS TEAM_CD_NM    
+        FROM 
+            TB_FS_AMMEMBER M
+        WHERE 
+            ROLE_CD IN ('12','13','83','84','85')
+            and member_state = '01'
+            and member_no in (SELECT CODE FROM TB_FS_ZCCODE WHERE CODEGRP = 'VW8' AND USE_YN = 'Y') 
+            ORDER BY MEMBER_NM
+    </select>
+    
+    <!-- 역할별 사용자 목록 -->
+    <select id="roleMemberList_N3"  parameterClass="hmap" resultClass="hmap">
+        SELECT 
+            MEMBER_NO  
+			, MEMBER_NM  
+			, MEMBER_STATE
+			, AGT_ASSIGN  
+			, TEAM_CD
+			, FN_ZCODE_NM('VW3', TEAM_CD) AS TEAM_CD_NM	
+        FROM 
+            TB_FS_AMMEMBER M
+        WHERE 
+            ROLE_CD IN ('12','13','84','85')
+            <isNotEmpty prepend="AND" property="member_state">	MEMBER_STATE = #member_state#	</isNotEmpty>
+            <isNull     prepend="AND" property="member_state">  MEMBER_STATE = '01'</isNull>
+            <isNotEmpty prepend="AND" property="agt_assign">	AGT_ASSIGN = #agt_assign#	</isNotEmpty>            
+            <isNotEmpty prepend="AND" property="team_cd">	TEAM_CD = #team_cd#	</isNotEmpty>
+            
+            <isNotNull prepend="ORDER BY" property="order1">  TEAM_CD, MEMBER_NM</isNotNull>            
+            <isNull prepend="ORDER BY" property="order1">  MEMBER_NM </isNull>
+                      
+    </select>
+    
+    
+    <!-- 비번 체크 -->
+    <select id="pwcheck"  parameterClass="hmap" resultClass="long">
+        SELECT
+            COUNT(*) as CNT
+        FROM 
+            TB_FS_AMMEMBER
+        WHERE
+            MEMBER_NO = #member_no#
+        AND MEMBER_PW = XX1.ENC_VARCHAR2_INS(#member_pw#,10,'AJU_SHA')
+    </select>
+    
+    <!-- 비번 수정 -->
+    <update id="updatePw" parameterClass="hmap">
+        UPDATE
+            TB_FS_AMMEMBER
+        SET
+            MEMBER_PW = XX1.ENC_VARCHAR2_INS(#member_pw#,10,'AJU_SHA')
+            , LAST_MODIFY_DATE = TO_CHAR(sysdate, 'YYYYMMDD')
+            , PW_CHG_DT = TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS')
+        WHERE  
+            MEMBER_NO = #member_no#
+    </update>
+    
+      <!-- 상담자 상태값 변경 -->
+    <update id="update2" parameterClass="hmap">
+        UPDATE 
+            TB_FS_AMMEMBER
+        SET AGT_STAT = #agt_stat# 
+           ,AGT_STAT_DATE =sysdate
+        WHERE 
+            MEMBER_NO = #agt_id#
+    </update>
+    
+
+    <!-- 상담자 상태값 변경 -->
+    <update id="update3" parameterClass="hmap">
+        UPDATE 
+            TB_FS_AMMEMBER
+        SET AGT_STAT = #agt_stat# 		   
+		   ,AGT_PHONE = #agt_phone#	        
+           ,AGT_STAT_DATE =sysdate
+        WHERE 
+            MEMBER_NO = #agt_id#
+    </update>
+    
+       <!-- SMS 수신 번호 변경  -->
+    <update id="update4" parameterClass="hmap">
+        UPDATE 
+            TB_FS_AMMEMBER
+        SET SMS_TEL_NO1 = #sphone1# 		   
+		   ,SMS_TEL_NO2 = #sphone2#	        
+           ,SMS_TEL_NO3 = #sphone3#	
+        WHERE 
+            MEMBER_NO = #send_member#
+    </update>   
+    
+        
+    <select id="get1" parameterClass="hmap" resultClass="hmap">			 			
+        SELECT   
+            MEMBER_NO
+        	, ROLE_CD
+        	, MEMBER_NM
+        	, MEMBER_PW
+        	, MEMBER_STATE
+        	, BANK_CD
+        	, BRANCH_CD
+        	, POSITION
+        	, DEPT_CD
+        	, DEPT_JOB
+        	, MOBILE_NO
+        	, MEMBER_IP            
+        	, AGT_STAT
+        	, AGT_STAT_DATE
+        	, AGT_ROLE
+        	, AGT_GROUP
+        	, AGT_CTI
+        	, AGT_PHONE
+        	, AGT_EXCEL
+        	, AGT_ASSIGN
+        FROM 
+            TB_FS_AMMEMBER	
+        WHERE 
+            MEMBER_STATE = '01'
+        <isNotEmpty property="agt_assign">AND AGT_ASSIGN = #agt_assign#</isNotEmpty>
+        <isNotEmpty property="role_cd"> AND ROLE_CD = #role_cd# </isNotEmpty>
+        <isNotEmpty property="MEMBER_NO"> AND MEMBER_NO = #agt_id# </isNotEmpty>
+        <isNotEmpty property="branch_cd"> AND branch_cd = #branch_cd# </isNotEmpty>
+        ORDER BY 
+            MEMBER_NM ASC
+    </select>
+    
+    
+    <select id="get2" parameterClass="hmap" resultClass="hmap">			 			
+        SELECT   
+            MEMBER_NO
+        	, ROLE_CD
+        	, MEMBER_NM
+        	, MEMBER_PW
+        	, MEMBER_STATE
+        	, BANK_CD
+        	, BRANCH_CD
+        	, POSITION
+        	, DEPT_CD
+        	, DEPT_JOB
+        	, MOBILE_NO
+        	, MEMBER_IP
+            
+        	, AGT_STAT
+        	, AGT_STAT_DATE
+        	, AGT_ROLE
+        	, AGT_GROUP
+        	, AGT_CTI
+        	, AGT_PHONE
+        	, AGT_EXCEL
+        	, AGT_ASSIGN
+        FROM 
+            TB_FS_AMMEMBER	
+        WHERE 
+            MEMBER_STATE = '01'
+            AND BRANCH_CD in ('97', '83', '84')
+        ORDER BY 
+            MEMBER_NM ASC
+    </select> 
+    
+
+    <select id="get3" parameterClass="String" resultClass="String">			 			
+        SELECT   
+            MEMBER_NM        	
+        FROM 
+            TB_FS_AMMEMBER	
+        WHERE MEMBER_NO = #value#
+    </select>
+    
+    <!-- 소비자금융, 채권팀 목록 -->
+    <select id="get4" parameterClass="hmap" resultClass="hmap">			 			
+        SELECT   
+            MEMBER_NO
+        	, ROLE_CD
+        	, MEMBER_NM
+        	, MEMBER_PW
+        	, MEMBER_STATE
+        	, BANK_CD
+        	, BRANCH_CD
+        	, POSITION
+        	, DEPT_CD
+        	, DEPT_JOB
+        	, MOBILE_NO
+        	, MEMBER_IP            
+        	, AGT_STAT
+        	, AGT_STAT_DATE
+        	, AGT_ROLE
+        	, AGT_GROUP
+        	, AGT_CTI
+        	, AGT_PHONE
+        	, AGT_EXCEL
+        	, AGT_ASSIGN
+        FROM 
+            TB_FS_AMMEMBER	
+        WHERE 
+            MEMBER_STATE = '01'
+        AND BRANCH_CD IN ('97', '83')
+        ORDER BY 
+            MEMBER_NM ASC
+    </select>
+    <!-- 소비자금융, 채권팀 목록 -->
+    <select id="get5" parameterClass="hmap" resultClass="hmap">			 			
+        SELECT   
+            MEMBER_NO
+        	, ROLE_CD
+        	, MEMBER_NM
+        	, MEMBER_PW
+        	, MEMBER_STATE
+        	, BANK_CD
+        	, BRANCH_CD
+        	, POSITION
+        	, DEPT_CD
+        	, DEPT_JOB
+        	, MOBILE_NO
+        	, MEMBER_IP            
+        	, AGT_STAT
+        	, AGT_STAT_DATE
+        	, AGT_ROLE
+        	, AGT_GROUP
+        	, AGT_CTI
+        	, AGT_PHONE
+        	, AGT_EXCEL
+        	, AGT_ASSIGN
+        FROM 
+            TB_FS_AMMEMBER	
+        WHERE 
+            MEMBER_STATE = '01'
+        AND BRANCH_CD IN ('83')
+        ORDER BY 
+            MEMBER_NM ASC
+    </select>    
+    
+    <!-- 자료관리 // 고객 내선번호,휴대번호 -->
+    <select id="get6" parameterClass="hmap" resultClass="hmap">
+    	SELECT   
+        	MOBILE_NO
+        	,AGT_ETEL
+        FROM 
+            TB_FS_AMMEMBER	
+        WHERE 
+            MEMBER_STATE = '01'
+        <isNotEmpty property="member_no"> AND MEMBER_NO = #member_no# </isNotEmpty>
+        ORDER BY 
+            MEMBER_NM ASC
+    </select>
+    <!-- 사원 목록(ComboBox용) -->
+    <select id="ComboBox" resultClass="hmap">
+        SELECT
+            MEMBER_NO AS CODE
+            , MEMBER_NM AS CODE_NM
+        FROM
+            TB_FS_AMMEMBER
+        WHERE
+            MEMBER_STATE = '01'
+        ORDER BY 
+            MEMBER_NM
+    </select>
+    
+    <!-- 사원 목록(ComboBox용) -->
+    <select id="ComboBox_ROLE" resultClass="hmap">
+        SELECT
+            MEMBER_NO AS CODE
+            , MEMBER_NM AS CODE_NM
+        FROM
+            TB_FS_AMMEMBER
+        WHERE
+            MEMBER_STATE = '01'
+            AND ROLE_CD =#role_cd#
+        ORDER BY 
+            MEMBER_NM
+    </select>
+    
+     <!-- 기표자 목록(ComboBox용) -->
+    <select id="ComboBox4" resultClass="hmap">
+        SELECT
+            MEMBER_NO AS CODE
+            , MEMBER_NM AS CODE_NM
+        FROM
+            TB_FS_AMMEMBER
+        WHERE
+            MEMBER_STATE = '01'
+        AND ROLE_CD = '04'   
+        ORDER BY 
+            MEMBER_NM
+    </select>
+
+	<!-- 사원 목록(ComboBox용) -->
+    <select id="ComboBox60" resultClass="hmap">
+        SELECT
+            MEMBER_NO AS CODE
+            , MEMBER_NM AS CODE_NM
+        FROM
+            TB_FS_AMMEMBER
+        WHERE
+            MEMBER_STATE = '01'
+            AND ROLE_CD <![CDATA[>=]]> '60' AND ROLE_CD <![CDATA[<]]> '70'
+        ORDER BY 
+            MEMBER_NM
+    </select>
+    
+    <!-- 심사자 사원 목록(ComboBox용) -->
+    <select id="ComboBox8000" resultClass="hmap">
+        SELECT
+            MEMBER_NO AS CODE
+            , MEMBER_NM AS CODE_NM
+        FROM
+            TB_FS_AMMEMBER
+        WHERE
+            MEMBER_STATE = '01'
+            AND ROLE_CD <![CDATA[>=]]> '70' AND ROLE_CD <![CDATA[<]]> '73'
+        ORDER BY 
+            MEMBER_NM
+    </select>
+     <!--기표자 사원 목록(ComboBox용) -->
+    <select id="ComboBox4_8000" resultClass="hmap">
+        SELECT
+            MEMBER_NO AS CODE
+            , MEMBER_NM AS CODE_NM
+        FROM
+            TB_FS_AMMEMBER
+        WHERE
+            MEMBER_STATE = '01'
+            AND ROLE_CD = '73'
+        ORDER BY 
+            MEMBER_NM
+    </select>
+	<!-- HANSUNG COPY S -->
+
+
+    <!-- 사용자 전체 목록 -->
+    <select id="List"  parameterClass="hmap" resultClass="hmap">
+        SELECT 
+            MEMBER_NO
+        	, ROLE_CD
+	        , (SELECT ROLE_NM FROM TB_FS_AMROLE WHERE ROLE_CD = M.ROLE_CD) AS ROLE_NM
+        	, MEMBER_NM
+        	, MEMBER_PW
+        	, MEMBER_STATE
+            , FN_ZCODE_NM('S03',MEMBER_STATE) MEMBER_STATE_NM 
+        	, BANK_CD
+            , UF_CodeName ('001',BANK_CD) BANK_NM
+        	, BRANCH_CD
+            , UF_CodeName ('002',BRANCH_CD) BRANCH_NM
+        	, POSITION
+            , FN_FS_BCODE_NAME('29',POSITION) POSITION_NM 
+        	, DEPT_CD
+            , UF_CodeName ('015',DEPT_CD) DEPT_NM
+        	, DEPT_JOB
+        	, MOBILE_NO
+        	, MEMBER_IP            
+        	, AGT_STAT
+            , UF_CodeName ('931',AGT_STAT) AGT_STAT_NM
+        	, AGT_STAT_DATE
+        	, AGT_ROLE
+            , UF_CodeName ('932',AGT_ROLE) AGT_ROLE_NM
+        	, AGT_GROUP
+            , UF_CodeName ('934',AGT_GROUP) as AGT_GROUP_NM
+        	, AGT_CTI
+        	, AGT_PHONE
+        	, AGT_EXCEL
+        	, AGT_ASSIGN
+        	, UF_CRYD_NEW2(IFIS_PWD) AS IFIS_PWD
+            , NVL(IFIS_LOAN_YN,'N') IFIS_LOAN_YN
+            , NVL(IFIS_DAILY_YN,'N') IFIS_DAILY_YN 
+            , TERMINAL_NO  
+            , MEMBER_IDNO
+            , TEAM_CD
+            , CAMPAUTH
+            , IFIS_USE_CODE
+            , PW_CHG_DT
+            , PW_RESET_YN
+            , IFIS_PW_CHG_DT
+            , LOGIN_ERR_CNT
+            , LOGIN_ACCESS_YN
+            , ACCESS_YN
+            , CRE_DT
+            , INQUIRY_ROLE
+        FROM 
+            TB_FS_AMMEMBER M
+        WHERE
+        	MEMBER_STATE = '01' 
+            <isNotEmpty property="member_no" prepend="AND ">MEMBER_NO = #member_no# </isNotEmpty>
+            <isNotEmpty property="member_nm" prepend="AND ">MEMBER_NM = #member_nm# </isNotEmpty>
+            <isNotEmpty property="role_cd"   prepend="AND ">ROLE_CD   = #role_cd# </isNotEmpty>
+            <isNotEmpty property="position"  prepend="AND ">POSITION  = #position# </isNotEmpty>
+            <isNotEmpty property="bank_cd"   prepend="AND ">BANK_CD   = #bank_cd# </isNotEmpty>
+            <isNotEmpty property="branch_cd" prepend="AND ">BRANCH_CD = #branch_cd# </isNotEmpty>
+            <isNotEmpty property="dept_cd"   prepend="AND ">DEPT_CD   = #dept_cd# </isNotEmpty>
+            <isNotEmpty property="agt_cti"   prepend="AND ">AGT_CTI   = #agt_cti# </isNotEmpty>
+            <isNotEmpty property="agt_phone" prepend="AND ">AGT_PHONE = #agt_phone#</isNotEmpty>
+        <isEmpty    property="orderby" prepend="ORDER BY ">MEMBER_NO DESC</isEmpty>
+        <isNotEmpty property="orderby">
+         ORDER BY $orderby$<isNotEmpty property="sort" > $sort$</isNotEmpty> 
+        </isNotEmpty>
+    </select>
+
+ 	<!-- HANSUNG COPY e -->   
+ 	
+ 	
+ 	<!--상담원 콜센터 사원 목록(ComboBox용) -->
+    <select id="gr400_List" resultClass="hmap">
+        SELECT
+            MEMBER_NO AS CODE
+            , MEMBER_NM AS CODE_NM
+        FROM
+            TB_FS_AMMEMBER
+        WHERE
+            MEMBER_STATE = '01'
+            AND AGT_GROUP = '400'
+        ORDER BY 
+            MEMBER_NM
+    </select>
+    
+    <!-- 비번변경여부 체크 -->
+    <select id="CHK_MODI_PW"  parameterClass="hmap" resultClass="long">
+        SELECT
+            COUNT(*) as CNT
+        FROM
+            TB_FS_AMMEMBER
+        WHERE
+            MEMBER_NO = #member_no#
+        AND MEMBER_PW = XX1.ENC_VARCHAR2_INS(#member_pw#,10,'AJU_SHA')
+        AND #member_ip# like '%'||MEMBER_IP||'%'
+        AND MEMBER_STATE = '01'
+        AND ROUND(SYSDATE - TO_DATE(LAST_MODIFY_DATE)) <![CDATA[<]]> 31
+    </select>
+    <select id="get_ifis_psw" parameterClass="string" resultClass="hmap">
+    	 SELECT 
+             UF_CRYD_NEW2(ifis_pwd) AS ifis_psw
+            ,ifis_pwd_hash as ifis_psw_hash
+    	FROM 
+    		tb_fs_ammember
+    	WHERE
+    	    MEMBER_NO = #value#
+ 	</select>
+ 	<update id="update_ifis_psw" parameterClass="hmap" >
+    	 UPDATE
+    	 	tb_fs_ammember
+    	 SET
+    	 	ifis_pwd=UF_CRYE_NEW2(#ifis_pwd#)
+    	 	,ifis_pwd_hash=#ifis_pwd_hash#
+    	 	, IFIS_PW_CHG_DT = TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS')
+    	 WHERE 
+    	 	MEMBER_NO = #ifis_member_no#
+    	 
+ 	</update>
+ 	
+ 	<select id="getMemberInfo" parameterClass="hmap" resultClass="hmap">
+        select 
+    	     MEMBER_NO
+    	     ,MEMBER_IP
+    	     ,TERMINAL_NO
+    	     ,UF_CRYD_NEW2(IFIS_PWD) AS IFIS_PWD
+    	     ,IFIS_PWD_HASH
+    	     ,BRANCH_CD
+    	  from tb_fs_ammember
+        
+        where branch_cd = #br_cd#
+          and ifis_use_code = #ifis_use_code#
+    </select>
+    
+    <!-- 로그인 오류횟수 초기화및 비밀번호 초기화 -->
+    <update id="memberLoginClear" parameterClass="hmap">
+    UPDATE TB_FS_AMMEMBER
+    SET
+    	LOGIN_ACCESS_YN = 'Y'
+    	, LOGIN_ERR_CNT = 0
+    	, MEMBER_PW = XX1.ENC_VARCHAR2_INS(#member_pw#,10,'AJU_SHA')
+    	, PW_RESET_YN = 'Y' 
+    WHERE
+    	MEMBER_NO = #member_no#
+    </update>
+    
+    <!--  비밀번호 변경 -->
+   	<update id="PW_MODIFY" parameterClass="hmap">
+        UPDATE
+            TB_FS_AMMEMBER
+        SET
+            MEMBER_PW = XX1.ENC_VARCHAR2_INS(#member_pw#,10,'AJU_SHA')
+		  , PW_CHG_DT = TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS')
+		  , PW_RESET_YN = 'N'
+        WHERE
+            MEMBER_NO = #member_no#
+    </update>
+    
+    <!-- 로그인 오류회수 변경 -->
+    <update id="update_ERR_CNT" parameterClass="hmap">
+        UPDATE
+            TB_FS_AMMEMBER
+        SET
+            LOGIN_ERR_CNT = LOGIN_ERR_CNT+1
+            , LOGIN_ACCESS_YN = DECODE(LOGIN_ERR_CNT, 4, 'N', 'Y')
+        WHERE
+            MEMBER_NO = #member_no#
+    </update>
+    
+    <!-- 로그인 오류회수 변경 -->
+    <update id="update_ERR_ZERO" parameterClass="hmap">
+        UPDATE
+            TB_FS_AMMEMBER
+        SET
+            LOGIN_ERR_CNT = 0
+            , LOGIN_ACCESS_YN = 'Y'
+        WHERE
+            MEMBER_NO = #member_no#
+    </update>
+    
+    
+     <insert id="insert_hst" parameterClass="hmap">
+     	INSERT INTO TB_FS_HST_AMMEMBER ( 
+	    	MEMBER_NO
+	        , HST_SEQ           
+	        , HST_DT   
+             <isNotNull property="hst_id" prepend=",">	HST_ID  </isNotNull> 
+             <isNotNull property="hst_type" prepend=","> HST_TYPE </isNotNull>              
+			, MEMBER_NM
+			, MEMBER_IDNO
+			, MEMBER_PW
+			, MEMBER_IP
+			, MEMBER_STATE
+			, POSITION
+			, ROLE_CD
+			, BANK_CD
+			, BRANCH_CD
+			, DEPT_CD
+			, DEPT_JOB
+			, MOBILE_NO
+			, AGT_STAT
+			, AGT_STAT_DATE
+			, AGT_ROLE
+			, AGT_GROUP
+			, AGT_CTI
+			, AGT_PHONE
+			, AGT_EXCEL
+			, AGT_ASSIGN
+			, AGT_ETEL
+			, AGT_DTEL
+			, API_PHONE
+			, IFIS_PWD
+			, IFIS_DAILY_YN
+			, IFIS_LOAN_YN
+			, TERMINAL_NO
+			, SMS_TEL_NO1
+			, SMS_TEL_NO2
+			, SMS_TEL_NO3
+			, GRID_VIEW
+			, REC_TYPE
+			, ASSIGN_SEQ
+			, TEAM_CD
+			, VIEW_ASSIGN
+			, VIEW_ASSIGN_DT
+			, ASSIGN_CONPATH
+			, RES_AMT
+			, CAMPAUTH
+			, LAST_MODIFY_DATE
+			, ASSIGN_REJECT_SEQ
+			, IFIS_PWD_HASH
+			, IFIS_USE_CODE
+			, PW_CHG_DT
+			, PW_RESET_YN
+			, IFIS_PW_CHG_DT
+			, LOGIN_ERR_CNT
+			, LOGIN_ACCESS_YN
+			, ASSIGN_SEQ2
+			, VIEW_ASSIGN_DT2
+			, ASSIGN_SEQ3
+			, VIEW_ASSIGN_DT3
+			, ASSIGN_SEQ4
+			, VIEW_ASSIGN_DT4
+			, ACCESS_YN
+			, ASSIGN_SEQ5
+			, VIEW_ASSIGN_DT5
+			, CRE_DT
+			, INQUIRY_ROLE
+       	) 
+		SELECT                                                              	
+			  #member_no#  AS MEMBER_NO
+			, (SELECT NVL( MAX(HST_SEQ),0) + 1 FROM TB_FS_HST_AMMEMBER WHERE MEMBER_NO = #member_no# ) AS HST_SEQ
+			, TO_CHAR(SYSDATE,'YYYYMMDDHH24MISS') AS HST_DT
+			<isNotNull property="hst_id" prepend=","> #hst_id# AS HST_ID </isNotNull>
+			<isNotNull property="hst_type" prepend=","> #hst_type# AS HST_TYPE </isNotNull>
+			, MEMBER_NM
+			, MEMBER_IDNO
+			, MEMBER_PW
+			, MEMBER_IP
+			, MEMBER_STATE
+			, POSITION
+			, ROLE_CD
+			, BANK_CD
+			, BRANCH_CD
+			, DEPT_CD
+			, DEPT_JOB
+			, MOBILE_NO
+			, AGT_STAT
+			, AGT_STAT_DATE
+			, AGT_ROLE
+			, AGT_GROUP
+			, AGT_CTI
+			, AGT_PHONE
+			, AGT_EXCEL
+			, AGT_ASSIGN
+			, AGT_ETEL
+			, AGT_DTEL
+			, API_PHONE
+			, IFIS_PWD
+			, IFIS_DAILY_YN
+			, IFIS_LOAN_YN
+			, TERMINAL_NO
+			, SMS_TEL_NO1
+			, SMS_TEL_NO2
+			, SMS_TEL_NO3
+			, GRID_VIEW
+			, REC_TYPE
+			, ASSIGN_SEQ
+			, TEAM_CD
+			, VIEW_ASSIGN
+			, VIEW_ASSIGN_DT
+			, ASSIGN_CONPATH
+			, RES_AMT
+			, CAMPAUTH
+			, LAST_MODIFY_DATE
+			, ASSIGN_REJECT_SEQ
+			, IFIS_PWD_HASH
+			, IFIS_USE_CODE
+			, PW_CHG_DT
+			, PW_RESET_YN
+			, IFIS_PW_CHG_DT
+			, LOGIN_ERR_CNT
+			, LOGIN_ACCESS_YN
+			, ASSIGN_SEQ2
+			, VIEW_ASSIGN_DT2
+			, ASSIGN_SEQ3
+			, VIEW_ASSIGN_DT3
+			, ASSIGN_SEQ4
+			, VIEW_ASSIGN_DT4
+			, ACCESS_YN
+			, ASSIGN_SEQ5
+			, VIEW_ASSIGN_DT5
+			, CRE_DT
+			, INQUIRY_ROLE
+		FROM TB_FS_AMMEMBER
+		WHERE MEMBER_NO = #member_no#
+    </insert>
+    
+    
+    <insert id="insert_hst2" parameterClass="hmap">
+    </insert>
+    
+    
+    <select id="SALES1_TEAM"  parameterClass="hmap" resultClass="hmap">
+        SELECT MEMBER_NO,
+		       MEMBER_NM,
+		       MEMBER_STATE,
+		       AGT_ASSIGN,
+		       TEAM_CD,
+		       (SELECT CODE_VAL1
+		          FROM TB_FS_ZCCODE
+		         WHERE     CODEGRP = 'VW5'
+		               AND USE_YN = 'Y'
+		               AND CODE_VAL2 = 'XS2'
+		               AND CODE_NM = M.MEMBER_NO)
+		          ASSIGN_YN
+		  FROM TB_FS_AMMEMBER M
+		 WHERE     MEMBER_NO IN
+		              (SELECT CODE_NM
+		                 FROM TB_FS_ZCCODE
+		                WHERE CODEGRP = 'VW5' AND USE_YN = 'Y' AND CODE_VAL2 = 'XS2')
+		       AND MEMBER_STATE = '01'
+                      
+    </select>
+    
+    <update id="memberAgreePaperConfirmSave" parameterClass="hmap">
+	    UPDATE TB_FS_AMMEMBER
+	    SET
+	    	AGREE_PAPER_DT = TO_CHAR(SYSDATE,'YYYYMMDDHH24MISS')
+	    WHERE
+	    	MEMBER_NO = #member_no#
+    </update>
+    
+     <select id="taskReqCheckerLIst"  parameterClass="hmap" resultClass="hmap">
+        SELECT 
+        	*
+        FROM 
+        	TB_FS_AMMEMBER 
+        WHERE 
+        	DEPT_CD = #dept_cd#
+        ORDER BY 
+            MEMBER_NM
+    </select>
+    
+    <update id="taskReqCheckerSave" parameterClass="hmap">
+	    UPDATE TB_FS_AMMEMBER
+	    SET
+	    	CHECKER = ##
+	    
+    </update>
+    
+</sqlMap>
+
+
+ammber
+###########################################################
+
+
+
+<?xml version="1.0" encoding="EUC-KR"?>
+<!DOCTYPE sqlMap PUBLIC "-//iBATIS.com//DTD SQL Map 2.0//EN" "http://www.ibatis.com/dtd/sql-map-2.dtd">
+
+<!-- 요구사항 -->
+<sqlMap namespace="taskreq">
+    
+    <!-- 검색 조건 -->
+    <sql id="common_where">
+		M.DEL_YN = 'N'
+		<isNotEmpty property="seach_dt_from">
+	            <isEqual property="seach_day" compareValue="req_dt"> AND ( M.REQ_DT <![CDATA[>=]]> #seach_dt_from# ||'000000' AND M.REQ_DT <![CDATA[<=]]> #seach_dt_to#||'999999' ) </isEqual>
+	            <isEqual property="seach_day" compareValue="rcpt_dt"> AND ( M.RCPT_DT <![CDATA[>=]]> #seach_dt_from# ||'000000' AND M.RCPT_DT <![CDATA[<=]]> #seach_dt_to#||'999999' ) </isEqual>
+	            <isEqual property="seach_day" compareValue="update_end_dt"> AND ( M.UPDATE_END_DT <![CDATA[>=]]> #seach_dt_from#||'000000' AND M.UPDATE_END_DT <![CDATA[<=]]> #seach_dt_to#||'999999' ) </isEqual>
+	            <isEqual property="seach_day" compareValue="end_dt"> AND ( M.END_DT <![CDATA[>=]]> #seach_dt_from#||'000000' AND M.END_DT <![CDATA[<=]]> #seach_dt_to# ||'999999') </isEqual>
+	 	</isNotEmpty>
+		
+		<isNotEmpty property="rcpt_admin_no" prepend="AND">			RCPT_ADMIN_NO = #rcpt_admin_no#	</isNotEmpty>
+		
+		<!-- <isNotEmpty property="proc_state_cd" prepend="AND">			PROC_STATE_CD = #proc_state_cd#	</isNotEmpty> -->
+		<isNotNull property="proc_state_cd" prepend="AND">
+			PROC_STATE_CD IN <iterate open="(" conjunction="," close=")" property="proc_state_cd">	#proc_state_cd[]#	</iterate>
+		</isNotNull>
+		
+		<isNotEmpty property="proc_admin_no" prepend="AND">	
+				PROC_ADMIN_NO = #proc_admin_no#	
+		</isNotEmpty>
+		
+		<isNotEmpty property="seach_text"><!-- isNotEmpty=> 값이 비어있지 않을 때, 즉 값이 있을 때만 실행하는 동적쿼리이다 -->
+				<isEqual property="seach_title" compareValue="req_user_id"> AND M.REQ_USER_NO = #seach_text# </isEqual>
+	            <isEqual property="seach_title" compareValue="req_user_nm"> AND M.REQ_USER_NO IN (SELECT MEMBER_NO FROM TB_FS_AMMEMBER WHERE MEMBER_NM LIKE '%' || #seach_text# || '%') </isEqual>
+	            <isEqual property="seach_title" compareValue="req_title"> AND M.REQ_TITLE LIKE '%' || #seach_text# || '%' </isEqual>
+	            <isEqual property="seach_title" compareValue="req_content"> AND M.REQ_CONTENT LIKE '%' || #seach_text# || '%' </isEqual>
+	            <isEqual property="seach_title" compareValue="proc_content"> AND M.PROC_CONTENT LIKE '%' || #seach_text# || '%' </isEqual>
+	            <isEqual property="seach_title" compareValue="seach_task_seq"> AND M.TASK_SEQ = #seach_text# </isEqual>
+	     </isNotEmpty>
+	     
+	     <isNotEmpty property="seach_seq" prepend="AND">	 M.TASK_SEQ = #seach_seq#</isNotEmpty>
+	     <isNotEmpty property="req_kind" prepend="AND">	 M.REQ_KIND = #req_kind#</isNotEmpty>
+	     <isNotEmpty property="range_cd" prepend="AND">	 M.RANGE_CD = #range_cd#</isNotEmpty>
+	     
+	     
+    </sql>
+    
+    
+    <sql id="common_select">
+       	  M.TASK_SEQ
+   		, M.REQ_DT
+        , M.RCPT_DT
+        , M.START_DT
+        , M.END_DT
+        , M.USED_TM
+        , M.COMPANY_CD
+        , M.SYS_CD
+        , FN_ZCODE_NM('926', M.SYS_CD) SYS_NM		          
+        , M.REQ_TITLE		        
+        , <![CDATA[replace(M.REQ_CONTENT, chr(13)|| chr(10), '<BR>')]]> AS REQ_CONTENT
+        , M.PROC_CONTENT
+        , M.REQ_USER_NO
+        , FN_MEMBER_NM(M.REQ_USER_NO) REQ_USER_NM
+        , M.DEPT_CD
+        , M.BRANCH_CD
+        , M.RCPT_ADMIN_NO
+        , M.PROC_ADMIN_NO
+        , M.SETTLE_ADMIN_NO
+        , M.PROC_STATE_CD                  
+        , M.SETTLE_STATE_CD
+        , M.RCPT_CD
+        , M.RANGE_CD
+        , M.REQ_RANGE_CD
+        , M.REQ_KIND
+        , FN_ZCODE_NM('924', M.PROC_STATE_CD) PROC_STATE_NM
+        , FN_ZCODE_NM('925', M.SETTLE_STATE_CD) SETTLE_STATE_NM
+        , FN_ZCODE_NM('927', M.RCPT_CD) RCPT_NM
+        , FN_ZCODE_NM('929', M.REQ_RANGE_CD) REQ_RANGE_NM
+        , FN_ZCODE_NM('929', M.RANGE_CD) RANGE_NM
+        , FN_ZCODE_NM('930', M.REQ_KIND) REQ_KIND_NM
+        , FN_ZCODE_NM('Z14',M.RCPT_ADMIN_NO) RCPT_ADMIN_NM	
+        , FN_ZCODE_NM('Z14',M.PROC_ADMIN_NO) PROC_ADMIN_NM  
+        , FN_ZCODE_NM('Z14',M.SETTLE_ADMIN_NO) SETTLE_ADMIN_NM  
+        , M.FILE_NM
+        , M.FILE_SIZE
+        , M.DEL_YN
+        , M.CPLT_PSB_DT
+      	, M.IMPT_CD
+        , M.RQM_DCNT
+      	, M.RQM_TM
+      	, M.APPLY_DCNT
+      	, M.TEST_END_DT
+      	, M.UPDATE_APPLY_DT
+      	, M.UPDATE_END_DT
+      	, M.SETTLE_ID
+      	, M.SETTLE_DT
+      	, M.REG_ID
+      	, M.REG_DT
+      	, M.CHG_ID
+      	, M.CHG_DT
+      	, UF_CRYD_NEW(M.FILE_PWD,'REGISTER_NO','TB_SL_TASKREQ') as FILE_PWD
+      	, M.SMS_RECEIVE_YN
+  	    , (SELECT COUNT(P.TASK_SEQ)
+             FROM TB_SL_TASKREQZFILE P
+                , TB_FS_ZFILE F
+            WHERE P.TASK_SEQ = M.TASK_SEQ
+              AND P.FILE_SEQ = F.FILE_SEQ
+              AND F.VIEW_YN = 'Y') AS FILE_CNT
+        , DIRECT_CHECK_YN
+        ,TO_DATE(substr(RCPT_DT,0,8), 'YYYYMMDD') - TO_DATE(substr(REQ_DT,0,8), 'YYYYMMDD') as REQ_RCPT_DAY
+		,TO_DATE(substr(START_DT,0,8), 'YYYYMMDD') - TO_DATE(substr(RCPT_DT,0,8), 'YYYYMMDD') as RCPT_START_DAY
+		,TO_DATE(substr(UPDATE_END_DT,0,8), 'YYYYMMDD') - TO_DATE(substr(START_DT,0,8), 'YYYYMMDD') as START_UPDATE_END_DAY
+		,TO_DATE(substr(UPDATE_END_DT,0,8), 'YYYYMMDD') - TO_DATE(substr(REQ_DT,0,8), 'YYYYMMDD') as REQ_UPDATE_END_DAY
+             
+    </sql>
+    
+    
+    <!-- 요구사항 리스트 -->
+    <select id="taskReqList" parameterClass="hmap" resultClass="hmap">
+        SELECT 
+            *
+        FROM ( 
+            SELECT
+                e.*, 
+                ROWNUM as RNUM
+            FROM (
+                SELECT
+				<include refid="common_select"/>
+				
+				 FROM 
+                    TB_SL_TASKREQ M
+                WHERE 
+             	<include refid="common_where"/>
+             	
+                ORDER BY 
+                	M.REQ_DT DESC, REQ_USER_NM, TASK_SEQ DESC
+             ) e
+            WHERE            
+                ROWNUM <![CDATA[<=]]> #END_ROW#
+        )
+        WHERE
+            RNUM <![CDATA[>=]]> #BEGIN_ROW#
+    </select>
+    
+
+    
+    <!-- 요구사항 리스트 엑셀 -->
+    <select id="taskReqListExcel" parameterClass="hmap" resultClass="hmap">        
+        SELECT
+            e.*, 
+            ROWNUM as RNUM
+        FROM (
+            SELECT
+            <include refid="common_select"/>
+            , <![CDATA[replace(M.REQ_CONTENT, chr(13)|| chr(10), '&nbsp;')]]> AS REQ_CONTENT_EXCEL
+            , <![CDATA[replace(M.REQ_TITLE, chr(13)|| chr(10), '&nbsp;')]]> AS REQ_TITLE_EXCEL
+            
+            FROM 
+                TB_SL_TASKREQ M
+            WHERE 
+             	<include refid="common_where"/>
+             	
+            ORDER BY 
+                M.REQ_DT DESC, REQ_USER_NM, TASK_SEQ DESC
+         ) e           
+    </select>
+    
+    
+    <!-- 요구사항 전체 카운트 정보 -->
+    <select id="taskReqListCount" parameterClass="hmap" resultClass="int">
+        SELECT COUNT(M.TASK_SEQ) AS count
+          FROM TB_SL_TASKREQ M
+      	 WHERE 
+     		<include refid="common_where"/>
+    </select>
+    
+    
+    <!-- 요구사항 상세 정보 -->
+    <select id="taskReqView" parameterClass="hmap" resultClass="hmap">
+        SELECT
+      		<include refid="common_select"/>
+          
+          <!-- 요청일자  -->
+		  , SUBSTR(M.REQ_DT,0,8) AS REQ_DT_DATE
+		  , SUBSTR(M.REQ_DT,9,2) AS REQ_DT_HOUR
+		  , SUBSTR(M.REQ_DT,11,2) AS REQ_DT_MINUTE
+		  
+		  <!-- 접수일자  -->
+	      , SUBSTR(M.RCPT_DT,0,8) AS RCPT_DT_DATE 
+		  , SUBSTR(M.RCPT_DT,9,2) AS RCPT_DT_HOUR 
+		  , SUBSTR(M.RCPT_DT,11,2) AS RCPT_DT_MINUTE
+		  
+		  <!-- 개발시작일자 -->
+		  , SUBSTR(M.START_DT,0,8) AS START_DT_DATE 
+		  , SUBSTR(M.START_DT,9,2) AS START_DT_HOUR 
+		  , SUBSTR(M.START_DT,11,2) AS START_DT_MINUTE
+		  
+		  <!-- 개발완료일자 -->
+          , SUBSTR(M.END_DT,0,8) AS END_DT_DATE 
+		  , SUBSTR(M.END_DT,9,2) AS END_DT_HOUR 
+		  , SUBSTR(M.END_DT,11,2) AS END_DT_MINUTE
+		  
+		  <!-- 개발완료가능일자  -->
+		  , SUBSTR(M.CPLT_PSB_DT,0,8) AS CPLT_PSB_DT_DATE
+	      , SUBSTR(M.CPLT_PSB_DT,9,2) AS CPLT_PSB_DT_HOUR
+	 	  , SUBSTR(M.CPLT_PSB_DT,11,2) AS CPLT_PSB_DT_MINUTE
+	 	  
+	 	  <!-- 테스트완료일자 -->
+	 	  , SUBSTR(M.TEST_END_DT,0,8) AS TEST_END_DT_DATE 
+		  , SUBSTR(M.TEST_END_DT,9,2) AS TEST_END_DT_HOUR 
+		  , SUBSTR(M.TEST_END_DT,11,2) AS TEST_END_DT_MINUTE
+	 	  
+	 	  <!-- 반영예정일자 -->
+		  , SUBSTR(M.UPDATE_APPLY_DT,0,8) AS UPDATE_APPLY_DT_DATE
+		  , SUBSTR(M.UPDATE_APPLY_DT,9,2) AS UPDATE_APPLY_DT_HOUR
+		  , SUBSTR(M.UPDATE_APPLY_DT,11,2) AS UPDATE_APPLY_DT_MINUTE 
+		  
+		  <!-- 반영완료일자 -->
+		  , SUBSTR(M.UPDATE_END_DT,0,8) AS UPDATE_END_DT_DATE
+		  , SUBSTR(M.UPDATE_END_DT,9,2) AS UPDATE_END_DT_HOUR
+		  , SUBSTR(M.UPDATE_END_DT,11,2) AS UPDATE_END_DT_MINUTE 
+        FROM 
+            TB_SL_TASKREQ M
+        WHERE
+        	 M.TASK_SEQ = #task_seq#
+    </select>
+    
+    <!-- 요청상태로 처리 -->
+    <update id="updateTaskReq" parameterClass="hmap">
+        UPDATE 
+            TB_SL_TASKREQ
+        SET 
+             SETTLE_ID = #member_no#
+            , SETTLE_DT = TO_CHAR(sysdate, 'YYYYMMDDHH24MISS')
+            , CHG_ID = #member_no#
+            , CHG_DT = TO_CHAR(sysdate, 'YYYYMMDDHH24MISS')
+            <isNotEmpty property="it_proc_state_cd">	 ,PROC_STATE_CD = #it_proc_state_cd#</isNotEmpty>
+            <isNotEmpty property="proc_state_cd">	 ,PROC_STATE_CD = #proc_state_cd#</isNotEmpty>
+            
+            <isNotEmpty property="direct_check_yn">	 ,DIRECT_CHECK_YN = #direct_check_yn#</isNotEmpty>
+        WHERE
+            TASK_SEQ = #task_seq#
+    </update>
+    
+    
+    <!-- 테스트완료 처리 -->
+    <update id="updateTaskReqTest" parameterClass="hmap">
+        UPDATE 
+            TB_SL_TASKREQ
+        SET 
+            PROC_STATE_CD = #proc_state_cd#
+            , TEST_END_DT = #test_end_dt#
+            , CHG_ID = #member_no#
+            , CHG_DT = TO_CHAR(sysdate, 'YYYYMMDDHH24MISS')
+        WHERE
+            TASK_SEQ = #task_seq#
+    </update>
+    
+    <update id="UpdateState" parameterClass="hmap">
+        UPDATE 
+            TB_SL_TASKREQ
+        SET 
+            RCPT_ADMIN_NO = #rcpt_admin_no#
+            , PROC_ADMIN_NO = #proc_admin_no#
+            , CHG_ID = #chg_id#
+            , CHG_DT = TO_CHAR(sysdate, 'YYYYMMDDHH24MISS')
+            , PROC_STATE_CD = #proc_state_cd#
+            , SETTLE_STATE_CD = #settle_state_cd#
+            
+            <isNotEmpty property="range_cd">	 , RANGE_CD = #range_cd#</isNotEmpty>
+            
+            <isEqual property="direct009_Insert" compareValue="Y"> , RCPT_DT = TO_CHAR(to_date(#update_end_dt#,'YYYYMMDDHH24MISS')-10/24/60, 'YYYYMMDDHH24MISS') </isEqual>
+            <isEqual property="direct009_Insert" compareValue="N"> , RCPT_DT = substr(TO_CHAR(sysdate, 'YYYYMMDDHH24MISS'),0,11)||'000' </isEqual>
+            
+            <isNotEmpty property="update_end_dt">	 ,START_DT = #update_end_dt#</isNotEmpty>
+            <isNotEmpty property="update_end_dt">	 ,END_DT = #update_end_dt#</isNotEmpty>
+            <isNotEmpty property="update_end_dt">	 ,UPDATE_APPLY_DT = #update_end_dt#</isNotEmpty>
+            <isNotEmpty property="update_end_dt">	 ,UPDATE_END_DT = #update_end_dt#</isNotEmpty>
+            
+        WHERE
+            TASK_SEQ = #task_seq#
+    </update>
+    
+    
+    <!-- 요구사항 정보 삭제설정 -->
+    <update id="updateDelYn" parameterClass="hmap">
+        UPDATE 
+            TB_SL_TASKREQ
+        SET 
+            DEL_YN = 'Y'        
+        WHERE
+            TASK_SEQ = #task_seq#
+    </update>
+    
+    <!-- 요구사항 정보 삭제 -->
+    <delete id="taskReqDelete" parameterClass="hmap">
+        DELETE 
+            FROM TB_SL_TASKREQ        
+        WHERE
+            TASK_SEQ = #task_seq#
+    </delete>
+    
+    <!-- 요구사항 정보 이력삭제 -->
+    <delete id="taskReqHstDelete" parameterClass="hmap">
+        DELETE 
+            FROM TB_SL_TASKREQ_HST        
+        WHERE
+            TASK_SEQ = #task_seq#
+    </delete>
+    
+    <!-- 요구사항 정보 첨부파일 삭제 -->
+    <delete id="zfileDelete" parameterClass="hmap">
+		UPDATE TB_FS_ZFILE
+		   SET VIEW_YN = #view_yn#
+		     , CRE_DT = TO_CHAR(sysdate, 'YYYYMMDDHH24MISS')
+			 , CRE_ID = #member_no#
+		 WHERE FILE_SEQ IN (SELECT FILE_SEQ FROM TB_SL_TASKREQZFILE WHERE TASK_SEQ = #task_seq#)
+    </delete>
+        
+    <!-- 요구사항 정보 이력 등록 -->      
+    <insert id="taskReqHstInsert" parameterClass="hmap">
+        <selectKey resultClass="String" keyProperty="hst_seq">
+            SELECT NVL(MAX(TO_NUMBER(HST_SEQ)), 0) + 1 AS hst_seq FROM TB_SL_TASKREQ_HST
+        </selectKey>
+        INSERT INTO TB_SL_TASKREQ_HST
+      	( 
+      		HST_SEQ, HST_REG_TS, TASK_SEQ, REQ_DT, RCPT_DT, START_DT, END_DT
+			, USED_TM, COMPANY_CD, SYS_CD, REQ_TITLE, REQ_CONTENT, PROC_CONTENT
+			, REQ_USER_NO, DEPT_CD, BRANCH_CD, RCPT_ADMIN_NO, PROC_ADMIN_NO
+			, SETTLE_ADMIN_NO, PROC_STATE_CD, SETTLE_STATE_CD, RCPT_CD, RANGE_CD, REQ_KIND , REQ_RANGE_CD
+			, FILE_NM, FILE_SIZE
+			, DEL_YN, CPLT_PSB_DT, IMPT_CD, RQM_DCNT, RQM_TM, APPLY_DCNT
+			, TEST_END_DT, UPDATE_APPLY_DT, UPDATE_END_DT
+			, SETTLE_ID, SETTLE_DT, REG_ID, REG_DT, CHG_ID, CHG_DT
+			, HST_DIV_CD, FILE_PWD, SMS_RECEIVE_YN
+		)
+     	(
+     		SELECT #hst_seq#, SYSTIMESTAMP, TASK_SEQ, REQ_DT, RCPT_DT, START_DT, END_DT
+				 , USED_TM, COMPANY_CD, SYS_CD, REQ_TITLE, REQ_CONTENT, PROC_CONTENT
+				 , REQ_USER_NO, DEPT_CD, BRANCH_CD, RCPT_ADMIN_NO, PROC_ADMIN_NO
+				 , SETTLE_ADMIN_NO, PROC_STATE_CD, SETTLE_STATE_CD, RCPT_CD, RANGE_CD, REQ_KIND , REQ_RANGE_CD
+				 , FILE_NM, FILE_SIZE
+				 , DEL_YN, CPLT_PSB_DT, IMPT_CD, RQM_DCNT, RQM_TM, APPLY_DCNT
+				 , TEST_END_DT, UPDATE_APPLY_DT, UPDATE_END_DT
+				 , SETTLE_ID, SETTLE_DT, REG_ID, REG_DT, CHG_ID, CHG_DT
+				 , #hst_div_cd#, FILE_PWD, SMS_RECEIVE_YN
+    		  FROM TB_SL_TASKREQ
+    		 WHERE TASK_SEQ = #task_seq#
+		)
+    </insert>
+    
+    <!-- 이력 검색 조건 -->
+    <sql id="Hwhere">
+        <dynamic prepend="WHERE">
+            M.TASK_SEQ = #task_seq#
+        </dynamic>
+    </sql>
+    
+    
+    <!-- 요구사항 이력 리스트 -->
+    <select id="taskReqHstList" parameterClass="hmap" resultClass="hmap">
+        SELECT 
+            *
+        FROM ( 
+            SELECT
+                e.*, 
+                ROWNUM as RNUM
+            FROM (
+                SELECT
+				<include refid="common_select"/>
+				, M.HST_SEQ
+	            , to_char(M.HST_REG_TS,'yyyymmddhh24miss') HST_REG_TS
+	            , M.HST_DIV_CD
+	            , FN_ZCODE_NM('931', M.HST_DIV_CD) HST_DIV_NM
+				
+                FROM 
+                    TB_SL_TASKREQ_HST M
+                    
+             	<include refid="Hwhere"/>
+             	
+                ORDER BY 
+                	M.HST_REG_TS DESC
+             ) e
+            WHERE            
+                ROWNUM <![CDATA[<=]]> #END_ROW#
+        )
+        WHERE
+            RNUM <![CDATA[>=]]> #BEGIN_ROW#
+    </select>
+    
+    
+    <!-- 요구사항 이력 전체 카운트 정보 -->
+    <select id="taskReqHstListCount" parameterClass="hmap" resultClass="int">
+        SELECT COUNT(M.HST_SEQ) AS count              
+          FROM TB_SL_TASKREQ_HST M
+        <include refid="Hwhere"/> 
+    </select>
+    
+    
+    <!-- 요구사항 이력 상세 조회 -->
+    <select id="taskReqHstView" parameterClass="hmap" resultClass="hmap">
+        SELECT
+        	<include refid="common_select"/>
+          , M.HST_SEQ
+          , to_char(M.HST_REG_TS,'yyyymmddhh24miss') HST_REG_TS
+          , M.HST_DIV_CD
+          , FN_ZCODE_NM('931', M.HST_DIV_CD) HST_DIV_NM
+        FROM 
+            TB_SL_TASKREQ_HST M
+        WHERE 
+        	M.TASK_SEQ = #task_seq#
+        AND M.HST_SEQ = #hst_seq#
+        ORDER BY 
+            M.HST_REG_TS DESC
+    </select>
+    
+    
+    <insert id="insertFile" parameterClass="hmap">
+      INSERT INTO TB_SL_TASKREQZFILE ( 
+			TASK_SEQ
+			, FILE_SEQ
+		) VALUES (
+			#seq#
+			, #file_seq#
+		)
+    </insert>
+    
+    <select id="FileView" parameterClass="hmap" resultClass="hmap">
+        SELECT
+        	  M.TASK_SEQ
+        	, M.FILE_SEQ
+        	, F.FILE_TITLE
+			, F.FILE_DESC
+			, F.FILE_TYPE
+			, FN_ZCODE_NM('928', F.FILE_TYPE) AS FILE_TYPE_NM
+			, F.ORG_FILE_NM
+			, F.SVR_FILE_NM
+			, F.SVR_DIR
+			, F.FILE_SIZE
+			, F.FILE_EXT
+			, F.VIEW_YN
+			, F.CRE_ID
+			, F.CRE_DT
+			, FN_MEMBER_NM(CRE_ID) AS CRE_ID_NM
+        FROM 
+            TB_SL_TASKREQZFILE M, TB_FS_ZFILE F
+        WHERE 
+        	M.FILE_SEQ = F.FILE_SEQ
+        AND
+        	M.TASK_SEQ = #task_seq#
+        AND F.VIEW_YN = 'Y'
+    </select>
+	
+	<select id="getTaskSeq" resultClass="string">
+		SELECT NVL(MAX(TO_NUMBER(TASK_SEQ)), 0) + 1 AS seq FROM TB_SL_TASKREQ
+	</select>
+	
+	<select id="getBizDate" parameterClass="hmap" resultClass="string">
+   		SELECT uf_BizDate(#apply_dcnt#, #start_dt_date#)
+    	  FROM DUAL
+ 	</select> 
+	
+	<update id="taskReqSave" parameterClass="hmap">
+		MERGE INTO
+			TB_SL_TASKREQ W
+		USING (
+			SELECT #task_seq# AS TASK_SEQ FROM DUAL
+		) P
+		ON (
+			W.TASK_SEQ = P.TASK_SEQ
+		)
+		WHEN NOT MATCHED THEN
+			 INSERT ( 
+		            TASK_SEQ
+                    <isNotNull property="req_dt">, REQ_DT	</isNotNull>
+                    <isNotNull property="rcpt_dt">, RCPT_DT	</isNotNull>
+                    <isNotNull property="start_dt">, START_DT	</isNotNull>
+                    <isNotNull property="end_dt">, END_DT	</isNotNull>
+		            <isNotNull property="company_cd">, COMPANY_CD	</isNotNull>
+		            <isNotNull property="sys_cd">, SYS_CD	</isNotNull>
+		            <isNotNull property="req_title">, REQ_TITLE	</isNotNull>
+		            <isNotNull property="req_content">, REQ_CONTENT	</isNotNull>
+		            <isNotNull property="proc_content">, PROC_CONTENT	</isNotNull>
+		            <isNotNull property="req_user_no">, REQ_USER_NO	</isNotNull>
+		            <isNotNull property="dept_cd">, DEPT_CD	</isNotNull>
+          			<isNotNull property="branch_cd">, BRANCH_CD	</isNotNull>
+		            <isNotNull property="rcpt_admin_no">, RCPT_ADMIN_NO	</isNotNull>
+		            <isNotNull property="proc_admin_no">, PROC_ADMIN_NO	</isNotNull>
+		            <isNotNull property="settle_admin_no">, SETTLE_ADMIN_NO	</isNotNull>
+		            <isNotNull property="proc_state_cd">, PROC_STATE_CD	</isNotNull>
+		            <isNotNull property="settle_state_cd">, SETTLE_STATE_CD	</isNotNull>
+		            <isNotNull property="rcpt_cd">, RCPT_CD	</isNotNull>
+		            <isNotNull property="range_cd">, RANGE_CD	</isNotNull>
+		            <isNotNull property="req_range_cd">, REQ_RANGE_CD	</isNotNull>
+		            <isNotNull property="req_kind">, REQ_KIND	</isNotNull>
+		            <isNotNull property="apply_dcnt">, APPLY_DCNT	</isNotNull>
+		            <isNotNull property="cplt_psb_dt">, CPLT_PSB_DT	</isNotNull>
+		            <isNotNull property="test_end_cd">, TEST_END_DT	</isNotNull>
+		            <isNotNull property="update_apply_dt">, UPDATE_APPLY_DT	</isNotNull>
+		            <isNotNull property="update_end_dt">, UPDATE_END_DT	</isNotNull>
+		            , SMS_RECEIVE_YN
+		            , REG_ID
+		            , REG_DT
+		            <isNotNull property="file_pwd">, FILE_PWD	</isNotNull>
+		       ) VALUES (
+		       		 #task_seq#
+		            <isNotNull property="req_dt">, #req_dt#	</isNotNull>
+		            <isNotNull property="rcpt_dt">, #rcpt_dt#	</isNotNull>
+		            <isNotNull property="start_dt">, #start_dt#	</isNotNull>
+		            <isNotNull property="end_dt">, #end_dt#	</isNotNull>
+		            <isNotNull property="company_cd">, #company_cd#	</isNotNull>
+		            <isNotNull property="sys_cd">, #sys_cd#	</isNotNull>
+		            <isNotNull property="req_title">, #req_title#	</isNotNull>
+		            <isNotNull property="req_content">, #req_content#	</isNotNull>
+		            <isNotNull property="proc_content">, #proc_content#	</isNotNull>
+		            <isNotNull property="req_user_no">, #req_user_no#	</isNotNull>
+		            <isNotNull property="dept_cd">, #dept_cd#	</isNotNull>
+		            <isNotNull property="branch_cd">, #branch_cd#	</isNotNull>
+		            <isNotNull property="rcpt_admin_no">, #rcpt_admin_no#	</isNotNull>
+	            	<isNotNull property="proc_admin_no">, #proc_admin_no#	</isNotNull>
+		            <isNotNull property="settle_admin_no">, #settle_admin_no#	</isNotNull>
+		            <isNotNull property="proc_state_cd">, #proc_state_cd#	</isNotNull>
+		            <isNotNull property="settle_state_cd">, #settle_state_cd#	</isNotNull>
+		            <isNotNull property="rcpt_cd">, #rcpt_cd#	</isNotNull>
+		            <isNotNull property="range_cd">, #range_cd#	</isNotNull>
+		            <isNotNull property="req_range_cd">, #req_range_cd#	</isNotNull>
+		            <isNotNull property="req_kind">, #req_kind#	</isNotNull>
+		            <isNotNull property="apply_dcnt">, #apply_dcnt#	</isNotNull>
+		            <isNotNull property="cplt_psb_dt">, #cplt_psb_dt#	</isNotNull>
+		            <isNotNull property="test_end_cd">, #test_end_cd#	</isNotNull>
+		            <isNotNull property="update_apply_dt">, #update_apply_dt#	</isNotNull>
+		            <isNotNull property="update_end_dt">, #update_end_dt#	</isNotNull>
+		            , #sms_receive_yn#
+		         	, #member_no#
+		            , TO_CHAR(sysdate, 'YYYYMMDDHH24MISS')
+		            <isNotNull property="file_pwd">, uf_crye_new(#file_pwd#,'register_no','TB_SL_TASKREQ')	</isNotNull>
+            	)
+		WHEN MATCHED THEN
+			UPDATE SET
+				CHG_ID = #member_no#
+				, CHG_DT = TO_CHAR(sysdate, 'YYYYMMDDHH24MISS')
+				<isNotNull property="req_dt" prepend=",">			REQ_DT			=	#req_dt#			</isNotNull>
+				<isNotNull property="rcpt_dt" prepend=",">			RCPT_DT			=	#rcpt_dt#			</isNotNull>
+				<isNotNull property="start_dt" prepend=",">			START_DT		=	#start_dt#			</isNotNull>
+				<isNotNull property="end_dt" prepend=",">			END_DT			=	#end_dt#			</isNotNull>
+				<isNotNull property="company_cd" prepend=",">		COMPANY_CD		=	#company_cd#		</isNotNull>
+				<isNotNull property="sys_cd" prepend=",">			SYS_CD			=	#sys_cd#			</isNotNull>
+				<isNotNull property="req_title" prepend=",">		REQ_TITLE		=	#req_title#			</isNotNull>
+				<isNotNull property="req_content" prepend=",">		REQ_CONTENT		=	#req_content#		</isNotNull>
+				<isNotNull property="proc_content" prepend=",">		PROC_CONTENT	=	#proc_content#		</isNotNull>
+				<isNotNull property="req_user_no" prepend=",">		REQ_USER_NO		=	#req_user_no#		</isNotNull>
+				<isNotNull property="dept_cd" prepend=",">			DEPT_CD			=	#dept_cd#			</isNotNull>
+				<isNotNull property="branch_cd" prepend=",">		BRANCH_CD		=	#branch_cd#			</isNotNull>
+				<isNotNull property="rcpt_admin_no" prepend=",">	RCPT_ADMIN_NO	=	#rcpt_admin_no#		</isNotNull>
+				<isNotNull property="proc_admin_no" prepend=",">	PROC_ADMIN_NO	=	#proc_admin_no#		</isNotNull>
+				<isNotNull property="settle_admin_no" prepend=",">	SETTLE_ADMIN_NO	=	#settle_admin_no#	</isNotNull>
+				<isNotNull property="proc_state_cd" prepend=",">	PROC_STATE_CD	=	#proc_state_cd#		</isNotNull>
+				<isNotNull property="settle_state_cd" prepend=",">	SETTLE_STATE_CD	=	#settle_state_cd#	</isNotNull>
+				<isNotNull property="rcpt_cd" prepend=",">			RCPT_CD			=	#rcpt_cd#			</isNotNull>
+				<isNotNull property="range_cd" prepend=",">			RANGE_CD		= 	#range_cd#			</isNotNull>
+				<isNotNull property="req_range_cd" prepend=",">		REQ_RANGE_CD	= 	#req_range_cd#		</isNotNull>
+				<isNotNull property="req_kind" prepend=",">			REQ_KIND		=	#req_kind#			</isNotNull>
+				<isNotNull property="apply_dcnt" prepend=",">		APPLY_DCNT		= 	#apply_dcnt#		</isNotNull>
+				<isNotNull property="cplt_psb_dt" prepend=",">		CPLT_PSB_DT		=	#cplt_psb_dt#		</isNotNull>
+				<isNotNull property="test_end_cd" prepend=",">		TEST_END_DT		=	#test_end_cd#		</isNotNull>
+				<isNotNull property="update_apply_dt" prepend=",">	UPDATE_APPLY_DT	=	#update_apply_dt#	</isNotNull>
+				<isNotNull property="update_end_dt" prepend=",">	UPDATE_END_DT	=	#update_end_dt#		</isNotNull>
+				<isNotNull property="file_pwd" prepend=",">			FILE_PWD		=	uf_crye_new(#file_pwd#,'register_no','TB_SL_TASKREQ')	</isNotNull>
+				, SMS_RECEIVE_YN = #sms_receive_yn#
+	</update>
+	
+</sqlMap>
+
+
+tasktrq.xml
+
+
+
+
+
+
+########################################
+
+<%@ page language="java" contentType="text/html; charset=EUC-KR"
+	pageEncoding="EUC-KR"%>
+<%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core"%>
+<%@ taglib prefix="fn" uri="http://java.sun.com/jsp/jstl/functions"%>
+<%@ taglib prefix="t" uri="/WEB-INF/tld/format.tld"%>
+<!DOCTYPE html>
+<html>
+
+<head>
+<meta charset="EUC-KR">
+<meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+<title>고객 지원</title>
+
+<link rel="stylesheet"
+	href="${pageContext.request.contextPath }/bootstrap/css/bootstrap.min.css">
+<link rel="stylesheet"
+	href="${pageContext.request.contextPath }/bootstrap/css/bootstrap.custom.css">
+<link rel="stylesheet"
+	href="${pageContext.request.contextPath }/jquery/css/jquery-ui.min.css">
+
+<style type="text/css">
+th {
+	text-align: center;
+}
+td{
+	
+}
+input.link {
+	border-top: 0px;
+	border-left: 0px;
+	border-right: 0px;
+	border-radius: 0px;
+}
+</style>
+<script type="text/javascript">
+	
+</script>
+</head>
+<body>
+	<c:set var="defaultOptionText" value="선택" />
+	<div class="" style="padding: 5px;">
+
+		<div>
+			<ul class="nav nav-tabs">
+				<li role="presentation" class="active"><a href="#"><c:if test="${detail.TASK_SEQ eq null}">승인자 등록</c:if>
+				<li style="padding-left: 900px;"><input type="button" name="closebtn" class="btn btn-default" value="닫  기" onclick="javascript:self.close();"></li>
+			</ul>
+		</div>
+
+
+		<h4>
+			■ 승인자 선택
+		</h4>
+		<div align="center">
+		<form id="checkerForm" name="checkerForm" action="checker.do">
+			<table class="table table-bordered" style="margin-bottom: 0px;">
+				<colgroup>
+					<col width="50%" />
+					<col width="50%" />
+				</colgroup>
+				<tbody>
+				<tr>
+				<th>메인승인자</th>
+				<th>서브승인자</th>
+				</tr>
+				
+				<tr>
+					<td>
+						<c:forEach var="mainM" items="${CheckerLIst }">
+							<div class="radio">
+								<label><input type="radio" id="CheckerFormMain" name="CheckerFormMain" value="M|${mainM.MEMBER_NO}" >${mainM.MEMBER_NM }</label>
+							</div>
+						</c:forEach>
+					</td>
+					
+					<td>
+						<c:forEach var="subS" items="${CheckerLIst }">
+							<div class="radio">
+								<label><input type="radio" id="CheckerFormSub" name="CheckerFormSub" value="S|${subS.MEMBER_NO}">${subS.MEMBER_NM }</label>
+							</div>
+						</c:forEach>
+					</td>
+				</tr>
+				
+			</table>
+		<div>
+		</div>
+		<div style="text-align: center; padding-top: 5px;">
+			<button type="button" id="button-save" class="btn btn-default">등록</button>
+			<button type="button" name="closebtn" class="btn btn-default" onclick="javascript:self.close();">닫기</button>
+		</div>
+	</form>
+					
+	
+		<form id="userForm" name="userForm"></form>
+	<script type="text/javascript"
+		src="${pageContext.request.contextPath }/jquery/js/jquery-1.11.2.min.js"></script>
+	<script type="text/javascript"
+		src="${pageContext.request.contextPath }/jquery/js/jquery-ui.min.js"></script>
+	<script type="text/javascript"
+		src="${pageContext.request.contextPath }/jquery/js/jquery.ui.datepicker-ko.js"></script>
+	<script type="text/javascript"
+		src="${pageContext.request.contextPath }/jquery/js/jquery.mask.min.js"></script>
+	<script type="text/javascript">
+		$(document).ready(function() {
+			$("#button-save").on("click",Save);	
+			
+		});
+
+		function Save() {
+			var CheckerFormMain=$("input[name='CheckerFormMain']:checked").val();
+			var CheckerFormSub=$("input[name='CheckerFormSub']:checked").val();
+
+			var data = $("#userForm").serialize();
+							
+		   	if( confirm("처리 하시겠습니까?") ) {
+		        $.ajax({
+					url: "/taskreq/taskReqCheckerSave.do",
+					type: "post",
+					data: data
+				}).done(function() {
+					alert("처리 되었습니다.");
+					//self.close();
+				
+				}).fail(failsaveRequireGetNew);
+			}
+			
+			}
+
+		function failsaveRequireGetNew() {
+			alert("처리 중 오류가 발생하였습니다.");
+		}		
+
+		
+</script>
+	<iframe name="ifr_cd" src="" width="0" scrolling="no" height="0"
+		frameborder=0></iframe>
+</body>
+</html>
+
+
+
+
+#################################
+
+
+
+
+<%@ page language="java" contentType="text/html; charset=EUC-KR" pageEncoding="EUC-KR"%>
+<%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
+<%@ taglib prefix="fn" uri="http://java.sun.com/jsp/jstl/functions" %>
+<%@ taglib prefix="t" uri="/WEB-INF/tld/format.tld" %>
+<!DOCTYPE html>
+<html>
+
+<head>
+<meta charset="EUC-KR">
+<meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+<title>고객 지원</title>
+<link rel="stylesheet" href="${pageContext.request.contextPath }/bootstrap/css/bootstrap.min.css">
+<link rel="stylesheet" href="${pageContext.request.contextPath }/bootstrap/css/bootstrap.custom.css">
+<link rel="stylesheet" href="${pageContext.request.contextPath }/jquery/css/jquery-ui.min.css">
+<style type="text/css">
+input.link {
+	border-top: 0px;
+	border-left: 0px;
+	border-right: 0px;
+	border-radius: 0px;
+}
+</style>
+</head>
+<body>
+	<c:set var="defaultOptionText" value="선택" />
+	<div class="" style="padding: 5px;">
+	
+	<div>
+		<ul class="nav nav-tabs">
+			<!-- <li role="presentation"><a onclick="goList();">목록</a></li> -->
+			<li role="presentation" class="active"><a href="#"><c:if test="${detail.TASK_SEQ eq null}">등록</c:if><c:if test="${detail.TASK_SEQ ne null}">상세조회</c:if></a></li>
+			<li style="padding-left:900px;">
+				<input type="button" name="closebtn" class="btn btn-default" value="닫  기" onclick="javascript:self.close();">
+			</li>
+		</ul>
+	</div>
+		
+	<form id="userForm" name="userForm">
+	
+		<input type="hidden" name="task_seq" id="task_seq" value="${detail.TASK_SEQ }" />			
+		<input type="hidden" name="req_dt" id="req_dt" value="${detail.REQ_DT}" />
+		<input type="hidden" name="rcpt_dt" id="rcpt_dt" value="${detail.RCPT_DT}" />
+		<input type="hidden" name="start_dt" id="start_dt" value="${detail.START_DT}" />
+		<input type="hidden" name="end_dt" id="end_dt" value="${detail.END_DT}" />
+		<input type="hidden" name="cplt_psb_dt" id="cplt_psb_dt" value="${detail.CPLT_PSB_DT}" />
+		<input type="hidden" name="update_apply_dt" id="update_apply_dt" value="${detail.UPDATE_APPLY_DT}" />
+		<input type="hidden" name="update_end_dt" id="update_end_dt" value="${detail.UPDATE_END_DT}" />
+		<input type="hidden" name="test_end_dt" id="test_end_dt" value="${detail.TEST_END_DT}" />
+		
+		<input type="hidden" name="req_user_no" id="req_user_no" value="${not empty detail.TASK_SEQ ? detail.REQ_USER_NO : sessionScope.ss_user.member_no }" />
+		<input type="hidden" name="dept_cd" id="dept_cd" value="${not empty detail.TASK_SEQ ? detail.DEPT_CD : sessionScope.ss_user.dept_cd }" />
+		<input type="hidden" name="branch_cd" id="branch_cd" value="${not empty detail.TASK_SEQ ? detail.BRANCH_CD : sessionScope.ss_user.branch_cd }" />
+		<input type="hidden" name="company_cd" id="company_cd" value="403" />
+		
+		<input type="hidden" name="proc_state_cd_ori" id="proc_state_cd_ori" value="${detail.PROC_STATE_CD}" />
+		
+		<!-- <input type="hidden" name="settle_state_cd" id="settle_state_cd" value="001" /> -->	<!-- 결재진행상황([Z_925]001:검토) -->
+		<input type="hidden" name="settle_admin_no" id="settle_admin_no" value="99930" />	<!-- 결재자(99930:조태환이사) -->
+		<input type="hidden" name="proc_gubun" id="proc_gubun" />	<!-- 처리구분 1:요청처리, 2:테스트완료처리 -->
+		<input type="hidden" name="direct_check_yn" id="direct_check_yn" />	<!-- 전산팀 즉시처리 여부 -->
+		
+		
+		
+		<input type="hidden" name="sms_receive_yn" id="sms_receive_yn" value="Y" />	<!-- sms수신여부(Y/N) -->
+		
+		<!-- 자료요청 파일첨부 열기 -->
+		<input type="hidden" name="dir" id="dir" />
+		<input type="hidden" name="file" id="file" />
+		<input type="hidden" name="uri" id="uri" />
+		<input type="hidden" name="type" id="type" />
+
+		<input type="hidden" name="hst_flag"/>
+			
+			<h4>
+				■ 요청사항
+			</h4>
+			<table class="table table-bordered" style="margin-bottom: 0px;">
+				<colgroup>
+					<col width="15%" />
+					<col width="35%" />
+					<col width="15%" />
+					<col width="35%" />
+				</colgroup>
+				<tbody>
+					<tr>
+						<th>요청일자</th>
+						<td>
+						<c:if test="${sessionScope.ss_user.role_cd == '09' }">
+							<input type="text" name="req_dt_date" id="req_dt_date" class="form-control input-ssm date" style="width: 100px;" 
+									value="${not empty detail.TASK_SEQ ? detail.REQ_DT_DATE : DATE }" />
+								
+							<select  style="width: 23%" name="req_dt_hour" id="req_dt_hour" class="form-control input-ssm">
+								<option value="">${defaultOptionText }</option>
+								<c:set value="${not empty detail.TASK_SEQ ? detail.REQ_DT_HOUR : HOUR }" var="SET_HOUR"/>
+								<c:forEach var="item" items="${Z_HOUR }">
+									<option value="${item.CODE}"<c:if test="${SET_HOUR == item.CODE}" >selected="selected" </c:if>>${item.NAME}시</option>
+								</c:forEach>
+							</select>
+							
+							<select style="width: 23%" name="req_dt_minute" id="req_dt_minute" class="form-control input-ssm">
+								<option value="">${defaultOptionText }</option>
+								<c:set value="${not empty detail.TASK_SEQ ? detail.REQ_DT_MINUTE : MINUTE }" var="SET_MINUTE"/>
+								<c:forEach var="item" items="${Z_MIN }">
+									<option value="${item.CODE}" <c:if test="${SET_MINUTE == item.CODE}" >selected="selected" </c:if>>${item.NAME}분</option>
+								</c:forEach>
+							</select>
+						</c:if>
+						<c:if test="${sessionScope.ss_user.role_cd != '09' }">
+							<t:fm type="DATIME5" value="${detail.REQ_DT}"/>
+							<input type="hidden" name="req_dt_date" id="req_dt_date" value="${not empty detail.TASK_SEQ ? detail.REQ_DT_DATE : DATE }" />
+							<input type="hidden" name="req_dt_hour" id="req_dt_hour" value="${not empty detail.TASK_SEQ ? detail.REQ_DT_HOUR : HOUR }" />
+							<input type="hidden" name="req_dt_minute" id="req_dt_minute" value="${not empty detail.TASK_SEQ ? detail.REQ_DT_MINUTE : MINUTE }" />
+						</c:if>
+						</td>
+						<th></th>
+						<td>
+						</td>
+					</tr>
+					<tr>
+						<th>요청자</th>
+						<td>
+							${not empty detail.REQ_USER_NM ? detail.REQ_USER_NM : sessionScope.ss_user.member_nm }
+						</td>
+						<th>부서</th>
+						<td>
+							${not empty detail.BRANCH_NM ? detail.BRANCH_NM : sessionScope.ss_user.branch_nm }
+							&nbsp;
+							${not empty detail.DEPT_NM ? detail.DEPT_NM : sessionScope.ss_user.dept_nm }
+						</td>
+					</tr>
+					<!--<tr>
+						<th>요청종류<span style="color:red">*</span></th>
+						<td>
+							<select name="req_kind" id="req_kind" class="form-control input-ssm" onchange="chkFilePwd();">
+								<option value="">${defaultOptionText }</option>
+								<c:forEach var="item" items="${Z_930}">
+									<option value="${item.CODE }" ${item.CODE eq detail.REQ_KIND ? 'selected=\'selected\'' : '' }>${item.NAME }</option>
+								</c:forEach>
+							</select>
+						</td>
+						<th</th>
+						<td></td>
+						<th>요청종류상세</th>
+						<td colspan="3">
+							<select name="req_range_cd" id="req_range_cd" class="form-control input-ssm" style="width:40%">
+								<option value="">${defaultOptionText }</option>
+								<c:forEach var="item" items="${Z_929 }">
+									<option value="${item.CODE }" ${item.CODE eq detail.REQ_RANGE_CD ? 'selected=\'selected\'' : '' }>${item.NAME }</option>
+								</c:forEach>
+							</select>
+						</td>
+					</tr>
+					<tr>
+						<th>요청구분</th>
+						<td>
+							<select name="rcpt_cd" id="rcpt_cd" class="form-control input-ssm">
+								<option value="">${defaultOptionText }</option>
+								<c:forEach var="item" items="${Z_927 }">
+									<c:if test="${sessionScope.ss_user.role_cd != '09' && item.CODE == '000'}">
+										<option value="${item.CODE }" ${item.CODE eq detail.RCPT_CD ? 'selected=\'selected\'' : '' }>${item.NAME }</option>
+									</c:if>
+									<c:if test="${sessionScope.ss_user.role_cd == '09'}">
+										<option value="${item.CODE }" ${item.CODE eq detail.RCPT_CD ? 'selected=\'selected\'' : '' }>${item.NAME }</option>
+									</c:if>
+								</c:forEach>
+							</select>
+						</td>
+						<th>시스템</th>
+						<td>
+							<select name="sys_cd" id="sys_cd" class="form-control input-ssm">
+								<option value="">${defaultOptionText }</option>
+								<c:forEach var="item" items="${Z_926}">
+									<option value="${item.CODE }" ${item.CODE eq detail.SYS_CD ? 'selected=\'selected\'' : '' }>${item.NAME }</option>
+								</c:forEach>
+							</select>
+						</td>-->
+					</tr>
+					<tr>
+						<th>요청사항 제목(${detail.TASK_SEQ})<span style="color:red">*</span></th>
+						<td colspan="3"><textarea style="height: 40px" name="req_title" id="req_title" class="form-control input-ssm" rows="6" >${detail.REQ_TITLE }</textarea></td>
+					</tr>
+					<tr>
+						<th>요청사항 상세<span style="color:red">*</span></th>
+						<td colspan="3"><textarea style="font-size : 20px; height: 400px;" name="req_content" id="req_content" class="form-control input-ssm" rows="6">${detail.REQ_CONTENT }</textarea></td>
+					</tr>
+					
+					<c:if test="${sessionScope.ss_user.role_cd != '09' && sessionScope.ss_user.role_cd != '08' }">
+						<c:if test="${detail.TASK_SEQ eq null}">
+							<tr>
+								<th>요청상태</th>
+								<td colspan="3">
+									<select name="proc_state_cd" id="proc_state_cd" class="form-control input-ssm" style="width:40%">
+										<option value="">${defaultOptionText }</option>
+										<option value="010" ${'010' eq detail.PROC_STATE_CD ? 'selected=\'selected\'' : '' }>사전요청</option>
+										<option value="014" ${'014' eq detail.PROC_STATE_CD ? 'selected=\'selected\'' : '' }>즉시요청</option>
+									</select>
+								</td>
+							</tr>
+						</c:if>
+					</c:if>
+					
+					<tr>
+						<th>테스트완료일자</th>
+						<td colspan="3">
+						<c:choose>
+							<c:when test="${detail.TASK_SEQ ne null && (detail.PROC_STATE_CD == '012')}">	<!-- 012:개발완료 -->
+								<input type="text" name="test_end_dt_date" id="test_end_dt_date" class="form-control input-ssm date" style="width: 100px;" 
+								value="${not empty detail.TASK_SEQ ? detail.TEST_END_DT_DATE : '' }" />
+								
+								<select style="width: 75px" name="test_end_dt_hour" id="test_end_dt_hour" class="form-control input-ssm">
+								<option value="">${defaultOptionText }</option>
+								<c:set value="${not empty detail.TASK_SEQ ? detail.TEST_END_DT_HOUR : '' }" var="SET_HOUR"/>
+								<c:forEach var="item" items="${Z_HOUR }">
+									<option value="${item.CODE}" <c:if test="${SET_HOUR == item.CODE}" >selected="selected" </c:if>>${item.NAME}시</option>
+								</c:forEach>
+								</select>
+								
+								<select style="width: 75px" name="test_end_dt_minute" id="test_end_dt_minute" class="form-control input-ssm">
+									<option value="">${defaultOptionText }</option>
+									<c:set value="${not empty detail.TASK_SEQ ? detail.TEST_END_DT_MINUTE : '' }" var="SET_MINUTE"/>
+									<c:forEach var="item" items="${Z_MIN }">
+										<option value="${item.CODE}" <c:if test="${SET_MINUTE == item.CODE}" >selected="selected" </c:if>>${item.NAME}분</option>
+									</c:forEach>
+								</select>
+								<!-- <input type="button" id="button-testdate-set" name="button-testdate-set" class="btn btn-xs" value="일자SET"> -->
+								<input type="button" id="button-req-set" name="button-req-set" class="btn btn-xs" value="테스트완료처리">
+							</c:when>
+							<c:otherwise>
+								<t:fm type="DATE" value="${detail.TEST_END_DT_DATE }"/>
+							</c:otherwise>
+						</c:choose>
+						</td>
+					</tr>
+					
+					<tr>
+						<th>
+							<span id="divFilePwd1" style="display:none;">
+								비밀번호
+							</span>
+						</th>
+						<td colspan="3">
+							<span id="divFilePwd2" style="display:none;">
+								<c:if test="${detail.TASK_SEQ eq null }">
+									<input type="text" name="file_pwd" id="file_pwd" value="${not empty detail.FILE_PWD ? '****' : ''}" maxlength="6" class="form-control input-ssm" style="width:25%">
+								</c:if>
+								<c:if test="${detail.TASK_SEQ ne null }">
+									${not empty detail.FILE_PWD ? '****' : ''}
+									<input type="hidden" name="file_pwd" id="file_pwd" value="${detail.FILE_PWD}">
+								</c:if>
+							</span>
+						</td>
+					</tr>
+				</table>
+				
+				<h5> &nbsp; * 자료추출요청의 경우 요청종류를 [자료요청] 으로 등록해주세요.</h5>
+				
+				<br>
+				<c:if test="${detail.TASK_SEQ ne null}">
+					<h4><font color="blue">■ 전산팀 확인사항 </font></h4>
+					<table class="table table-bordered" style="margin-bottom: 0px;">
+					<colgroup>
+						<col width="15%" />
+						<col width="35%" />
+						<col width="15%" />
+						<col width="35%" />
+					</colgroup>
+					<tbody>
+						<tr>
+							<th>즉시처리</th>
+							<td>
+							  <c:choose>
+								 <c:when test="${(sessionScope.ss_user.role_cd == '08' || sessionScope.ss_user.role_cd == '09') 
+	              						&& (detail.PROC_STATE_CD =='010' || detail.PROC_STATE_CD =='003' || detail.PROC_STATE_CD =='004') }">
+								 	  <c:choose>
+									 	 <c:when test="${detail.DIRECT_CHECK_YN == 'Y'}">
+											 	<input type="checkbox" id='direct_check_box' checked>
+										 </c:when>
+										 <c:otherwise>
+										 	<input type="checkbox" id='direct_check_box'>
+										 </c:otherwise>
+										</c:choose>
+								 </c:when>
+								 <c:otherwise>
+										 ${detail.DIRECT_CHECK_YN}
+								 </c:otherwise>
+							</c:choose>
+							</td>
+							
+							 <c:choose>
+							 	
+								 <c:when test="${(sessionScope.ss_user.role_cd == '08' || sessionScope.ss_user.member_ip eq '192.168.0.81' || sessionScope.ss_user.member_ip eq '192.168.0.185') 
+	              						&& (detail.PROC_STATE_CD =='010' ||detail.PROC_STATE_CD =='014' || detail.PROC_STATE_CD =='003' || detail.PROC_STATE_CD =='004') }">
+								 	  	<th>요청상태</th>
+										<td>
+								 	  	<select name="it_proc_state_cd" id="it_proc_state_cd" class="form-control input-ssm" style="width:40%">
+											<option value="015" ${'015' eq detail.PROC_STATE_CD ? 'selected=\'selected\'' : '' }>포이_사전요청</option>
+											<option value="016" ${'016' eq detail.PROC_STATE_CD ? 'selected=\'selected\'' : '' }>포이_즉시요청</option>
+											<option value="003" ${'003' eq detail.PROC_STATE_CD ? 'selected=\'selected\'' : '' }>보류</option>
+											<option value="004" ${'004' eq detail.PROC_STATE_CD ? 'selected=\'selected\'' : '' }>제외</option>
+										</select>
+										</td>
+								 </c:when>
+								 <c:otherwise>
+									 <th></th>
+									 <td></td>
+									 <input type="hidden" name="it_proc_state_cd" id="it_proc_state_cd">
+								 </c:otherwise>
+							</c:choose>
+							
+							
+								
+							</td>
+						</tr>
+					</table>
+					
+	                <br>
+	              		<c:if test="${(sessionScope.ss_user.role_cd == '08' || sessionScope.ss_user.member_ip == '192.168.0.81' || sessionScope.ss_user.member_ip == '192.168.0.185') 
+	              		&& (detail.PROC_STATE_CD =='010' || detail.PROC_STATE_CD =='003' || detail.PROC_STATE_CD =='004') }">
+		                <div style="text-align: center; padding-top: 5px;">
+								<button type="button" id="button-req-set" name="button-req-set" class="btn btn-default" value="요청처리" >요청처리</button>
+		                </div>
+		                </c:if>
+	                <br>
+				</c:if>
+				
+				<c:if test="${sessionScope.ss_user.role_cd == '08' || sessionScope.ss_user.role_cd == '09' }">
+				
+				<h4><font color="blue">■ 처리사항</font></h4>
+				<table class="table table-bordered" style="margin-bottom: 0px;">
+				<colgroup>
+					<col width="15%" />
+					<col width="35%" />
+					<col width="15%" />
+					<col width="35%" />
+				</colgroup>
+				<tbody>
+					<tr>
+						<th>접수일자<span style="color:red">*</span></th>
+						<td>															
+							<input type="text" name="rcpt_dt_date" id="rcpt_dt_date" class="form-control input-ssm date" style="width: 100px;" 
+									value="${not empty detail.TASK_SEQ ? detail.RCPT_DT_DATE : '' }" />
+								
+							<select  style="width: 23%" name="rcpt_dt_hour" id="rcpt_dt_hour" class="form-control input-ssm">
+								<option value="">${defaultOptionText }</option>
+								<c:set value="${not empty detail.TASK_SEQ ? detail.RCPT_DT_HOUR : '' }" var="SET_HOUR"/>
+								<c:forEach var="item" items="${Z_HOUR }">
+									<option value="${item.CODE}"<c:if test="${SET_HOUR == item.CODE}" >selected="selected" </c:if>>${item.NAME}시</option>
+								</c:forEach>
+							</select>
+							
+							<select style="width: 23%" name="rcpt_dt_minute" id="rcpt_dt_minute" class="form-control input-ssm">
+								<option value="">${defaultOptionText }</option>
+								<c:set value="${not empty detail.TASK_SEQ ? detail.RCPT_DT_MINUTE : '' }" var="SET_MINUTE"/>
+								<c:forEach var="item" items="${Z_MIN }">
+									<option value="${item.CODE}" <c:if test="${SET_MINUTE == item.CODE}" >selected="selected" </c:if>>${item.NAME}분</option>
+								</c:forEach>
+							</select>
+						</td>
+						<th>접수자</th>
+						<td>
+							<select name="rcpt_admin_no" id="rcpt_admin_no" class="form-control input-ssm">
+								<option value="">${defaultOptionText }</option>
+								<c:forEach var="li" items="${Z_14}">
+									<option value="${li.CODE}" ${li.CODE eq detail.PROC_ADMIN_NO ? 'selected=\'selected\'' : '' }>${li.NAME}</option>
+								</c:forEach>
+							</select>
+						</td>
+					</tr>
+					<tr>
+						<th>개발예상기간</th>
+						<td>
+							<select name="apply_dcnt" id="apply_dcnt" class="form-control input-ssm" style="width: 100px;">
+								<option value="">${defaultOptionText }</option>
+								<c:forEach var="item" items="${Z_DD }">
+									<option value="${item.CODE}" <c:if test="${detail.APPLY_DCNT == item.CODE}" >selected="selected" </c:if>>${item.NAME}일</option>
+								</c:forEach>
+							</select>
+						</td>
+						<th>개발완료가능일자</th>
+						<td>
+							<input type="text" name="cplt_psb_dt_date" id="cplt_psb_dt_date" class="form-control input-ssm date" style="width: 100px;" 
+							value="${not empty detail.TASK_SEQ ? detail.CPLT_PSB_DT_DATE : '' }" />
+							
+							<select  style="width: 23%" name="cplt_psb_dt_hour" id="cplt_psb_dt_hour" class="form-control input-ssm">
+							<option value="">${defaultOptionText }</option>
+							<c:set value="${not empty detail.TASK_SEQ ? detail.CPLT_PSB_DT_HOUR : '' }" var="SET_HOUR"/>
+							<c:forEach var="item" items="${Z_HOUR }">
+								<option value="${item.CODE}" <c:if test="${SET_HOUR == item.CODE}" >selected="selected" </c:if>>${item.NAME}시</option>
+							</c:forEach>
+							</select>
+							
+							<select style="width: 23%" name="cplt_psb_dt_minute" id="cplt_psb_dt_minute" class="form-control input-ssm">
+								<option value="">${defaultOptionText }</option>
+								<c:set value="${not empty detail.TASK_SEQ ? detail.CPLT_PSB_DT_MINUTE : '' }" var="SET_MINUTE"/>
+								<c:forEach var="item" items="${Z_MIN }">
+									<option value="${item.CODE}" <c:if test="${SET_MINUTE == item.CODE}" >selected="selected" </c:if>>${item.NAME}분</option>
+								</c:forEach>
+							</select>
+							<c:if test="${not empty detail.TASK_SEQ}">
+								<!-- <input type="button" id="button-date-set" name="button-date-set" class="btn btn-xs" value="일자SET"> -->
+							</c:if>
+						</td>
+					</tr>
+					<tr>
+						<th>개발시작일자</th>
+						<td>
+							<input type="text" name="start_dt_date" id="start_dt_date" class="form-control input-ssm date" style="width: 100px;" 
+							value="${not empty detail.TASK_SEQ ? detail.START_DT_DATE : '' }" />
+							
+							<select  style="width: 23%" name="start_dt_hour" id="start_dt_hour" class="form-control input-ssm">
+							<option value="">${defaultOptionText }</option>
+							<c:set value="${not empty detail.TASK_SEQ ? detail.START_DT_HOUR : '' }" var="SET_HOUR"/>
+							<c:forEach var="item" items="${Z_HOUR }">
+								<option value="${item.CODE}" <c:if test="${SET_HOUR == item.CODE}" >selected="selected" </c:if>>${item.NAME}시</option>
+							</c:forEach>
+							</select>
+							
+							<select style="width: 23%" name="start_dt_minute" id="start_dt_minute" class="form-control input-ssm">
+								<option value="">${defaultOptionText }</option>
+								<c:set value="${not empty detail.TASK_SEQ ? detail.START_DT_MINUTE : '' }" var="SET_MINUTE"/>
+								<c:forEach var="item" items="${Z_MIN }">
+									<option value="${item.CODE}" <c:if test="${SET_MINUTE == item.CODE}" >selected="selected" </c:if>>${item.NAME}분</option>
+								</c:forEach>
+							</select>
+						</td>
+						<th>개발완료일자</th>
+						<td>
+							<input type="text" name="end_dt_date" id="end_dt_date" class="form-control input-ssm date" style="width: 100px;"
+							value="${not empty detail.TASK_SEQ ? detail.END_DT_DATE : '' }" />
+								
+							<select  style="width: 23%" name="end_dt_hour" id="end_dt_hour" class="form-control input-ssm">
+							<option value="">${defaultOptionText }</option>
+							<c:set value="${not empty detail.TASK_SEQ ? detail.END_DT_HOUR : '' }" var="SET_HOUR"/>
+							<c:forEach var="item" items="${Z_HOUR }">
+								<option value="${item.CODE}" <c:if test="${SET_HOUR == item.CODE}" >selected="selected" </c:if>>${item.NAME}시</option>
+							</c:forEach>
+							</select>
+							
+							<select style="width: 23%" name="end_dt_minute" id="end_dt_minute" class="form-control input-ssm">
+								<option value="">${defaultOptionText }</option>
+								<c:set value="${not empty detail.TASK_SEQ ? detail.END_DT_MINUTE : '' }" var="SET_MINUTE"/>
+								<c:forEach var="item" items="${Z_MIN }">
+									<option value="${item.CODE}" <c:if test="${SET_MINUTE == item.CODE}" >selected="selected" </c:if>>${item.NAME}분</option>
+								</c:forEach>
+							</select>
+						</td>
+					</tr>
+					<tr>
+						<th>반영예정일자</th>
+						<td>
+							<input type="text" name="update_apply_dt_date" id="update_apply_dt_date" class="form-control input-ssm date" style="width: 100px;"
+							value="${not empty detail.TASK_SEQ ? detail.UPDATE_APPLY_DT_DATE : '' }" />
+								
+							<select  style="width: 23%" name="update_apply_dt_hour" id="update_apply_dt_hour" class="form-control input-ssm">
+							<option value="">${defaultOptionText }</option>
+							<c:set value="${not empty detail.TASK_SEQ ? detail.UPDATE_APPLY_DT_HOUR : '' }" var="SET_HOUR"/>
+							<c:forEach var="item" items="${Z_HOUR }">
+								<option value="${item.CODE}" <c:if test="${SET_HOUR == item.CODE}" >selected="selected" </c:if>>${item.NAME}시</option>
+							</c:forEach>
+							</select>
+							
+							<select style="width: 23%" name="update_apply_dt_minute" id="update_apply_dt_minute" class="form-control input-ssm">
+								<option value="">${defaultOptionText }</option>
+								<c:set value="${not empty detail.TASK_SEQ ? detail.UPDATE_APPLY_DT_MINUTE : '' }" var="SET_MINUTE"/>
+								<c:forEach var="item" items="${Z_MIN }">
+									<option value="${item.CODE}" <c:if test="${SET_MINUTE == item.CODE}" >selected="selected" </c:if>>${item.NAME}분</option>
+								</c:forEach>
+							</select>
+						</td>
+						<th>반영완료일자</th>
+						<td>
+							<input type="text" name="update_end_dt_date" id="update_end_dt_date" class="form-control input-ssm date" style="width: 100px;" 
+							value="${not empty detail.TASK_SEQ ? detail.UPDATE_END_DT_DATE : '' }" />
+							
+							<select  style="width: 23%" name="update_end_dt_hour" id="update_end_dt_hour" class="form-control input-ssm">
+							<option value="">${defaultOptionText }</option>
+							<c:set value="${not empty detail.TASK_SEQ ? detail.UPDATE_END_DT_HOUR : '' }" var="SET_HOUR"/>
+							<c:forEach var="item" items="${Z_HOUR }">
+								<option value="${item.CODE}" <c:if test="${SET_HOUR == item.CODE}" >selected="selected" </c:if>>${item.NAME}시</option>
+							</c:forEach>
+							</select>
+							
+							<select style="width: 23%" name="update_end_dt_minute" id="update_end_dt_minute" class="form-control input-ssm">
+								<option value="">${defaultOptionText }</option>
+								<c:set value="${not empty detail.TASK_SEQ ? detail.UPDATE_END_DT_MINUTE : '' }" var="SET_MINUTE"/>
+								<c:forEach var="item" items="${Z_MIN }">
+									<option value="${item.CODE}" <c:if test="${SET_MINUTE == item.CODE}" >selected="selected" </c:if>>${item.NAME}분</option>
+								</c:forEach>
+							</select>
+							
+							<input type="button" id="button-allDate-set" name="button-allDate-set" class="btn btn-xs" value="일자SET">
+						</td>
+					</tr>
+					<tr>
+						<th>결재진행상황</th>
+						<td>
+							<select name="settle_state_cd" id="settle_state_cd" class="form-control input-ssm">
+								<option value="006">완료</option>
+								<c:forEach var="item" items="${Z_15 }">
+									<option value="${item.CODE }" ${item.CODE eq detail.SETTLE_STATE_CD ? 'selected=\'selected\'' : '' }>${item.NAME }</option>
+								</c:forEach>
+							</select>
+						</td>
+						<th>결재자</th>
+						<td>
+							김광진
+						</td>
+					</tr>
+					<tr>
+						<th>처리내용</th>
+						<td colspan="3"><textarea name="proc_content" id="proc_content" class="form-control input-ssm" rows="6">${detail.PROC_CONTENT }</textarea></td>
+					</tr>
+					<tr>
+						<th>처리상태</th>
+						<td>
+							<select name="proc_state_cd" id="proc_state_cd" class="form-control input-ssm">
+								<option value="">${defaultOptionText }</option>
+								<c:forEach var="item" items="${Z_924 }">
+									<option value="${item.CODE }" ${item.CODE eq detail.PROC_STATE_CD ? 'selected=\'selected\'' : '' }>${item.NAME }</option>
+								</c:forEach>
+							</select>
+						</td>
+						<th>처리자<span style="color:red">*</span></th>
+						<td>
+							<select name="proc_admin_no" id="proc_admin_no" class="form-control input-ssm" onchange="setAdminNo();">
+								<option value="">${defaultOptionText }</option>
+								<c:forEach var="li" items="${Z_14}">
+									<option value="${li.CODE}" ${li.CODE eq detail.PROC_ADMIN_NO ? 'selected=\'selected\'' : '' }>${li.NAME}</option>
+								</c:forEach>
+							</select>
+							<input type="hidden" name="proc_admin_no_ori" value="${detail.PROC_ADMIN_NO }" />
+						</td>
+					</tr>
+					<tr>
+						<th>업무처리구분</th>
+						<td colspan="3">
+							<select name="range_cd" id="range_cd" class="form-control input-ssm" style="width:40%">
+								<option value="">선택</option>
+								<c:forEach var="item" items="${Z_929 }">
+									<c:if test="${item.CODE =='013' || item.CODE =='014'}">
+										<option value="${item.CODE }" ${item.CODE eq detail.RANGE_CD ? 'selected=\'selected\'' : '' }>${item.NAME }</option>
+									</c:if>
+								</c:forEach>
+							</select>
+						</td>
+					</tr>
+				</table>
+                
+                <br>
+                
+                </c:if>
+                       
+                <c:if test="${detail.TASK_SEQ eq null && sessionScope.ss_user.role_cd != '09' }">
+                	<!-- 접수일자 -->
+                	<input type="hidden" name="rcpt_dt_date" id="rcpt_dt_date" value="${detail.RCPT_DT_DATE}" />
+					<input type="hidden" name="rcpt_dt_hour" id="rcpt_dt_hour" value="${detail.RCPT_DT_HOUR}" />
+					<input type="hidden" name="rcpt_dt_minute" id="rcpt_dt_minute" value="${detail.RCPT_DT_MINUTE}" />
+					
+					<!-- 개발완료가능일자 -->
+					<input type="hidden" name="cplt_psb_dt_date" id="cplt_psb_dt_date" value="${detail.CPLT_PSB_DT_DATE}" />
+					<input type="hidden" name="cplt_psb_dt_hour" id="cplt_psb_dt_hour" value="${detail.CPLT_PSB_DT_HOUR}" />
+					<input type="hidden" name="cplt_psb_dt_minute" id="cplt_psb_dt_minute" value="${detail.CPLT_PSB_DT_MINUTE}" />
+					
+					<!-- 개발시작일자 -->
+					<input type="hidden" name="start_dt_date" id="start_dt_date" value="${detail.START_DT_DATE}" />
+					<input type="hidden" name="start_dt_hour" id="start_dt_hour" value="${detail.START_DT_HOUR}" />
+					<input type="hidden" name="start_dt_minute" id="start_dt_minute" value="${detail.START_DT_MINUTE}" />
+					
+					<!-- 개발완료일자 -->
+					<input type="hidden" name="end_dt_date" id="end_dt_date" value="${detail.END_DT_DATE}" />
+					<input type="hidden" name="end_dt_hour" id="end_dt_hour" value="${detail.END_DT_HOUR}" />
+					<input type="hidden" name="end_dt_minute" id="end_dt_minute" value="${detail.END_DT_MINUTE}" />
+
+					<!-- 반영예정일자 -->
+					<input type="hidden" name="update_apply_dt_date" id="update_apply_dt_date" value="${detail.UPDATE_APPLY_DT_DATE}" />
+					<input type="hidden" name="update_apply_dt_hour" id="update_apply_dt_hour" value="${detail.UPDATE_APPLY_DT_HOUR}" />
+					<input type="hidden" name="update_apply_dt_minute" id="update_apply_dt_minute" value="${detail.UPDATE_APPLY_DT_MINUTE}" />
+					
+					<!-- 반영완료일자 -->
+					<input type="hidden" name="update_end_dt_date" id="update_end_dt_date" value="${detail.UPDATE_END_DT_DATE}" />
+					<input type="hidden" name="update_end_dt_hour" id="update_end_dt_hour" value="${detail.UPDATE_END_DT_HOUR}" />
+					<input type="hidden" name="update_end_dt_minute" id="update_end_dt_minute" value="${detail.UPDATE_END_DT_MINUTE}" />
+                </c:if>
+                
+                <c:if test="${detail.TASK_SEQ ne null && sessionScope.ss_user.role_cd != '08' && sessionScope.ss_user.role_cd != '09' }">
+				
+				<h4>■ 처리사항</h4>
+				<table class="table table-bordered" style="margin-bottom: 0px;">
+				<colgroup>
+					<col width="15%" />
+					<col width="35%" />
+					<col width="15%" />
+					<col width="35%" />
+				</colgroup>
+				<tbody>
+					<tr>
+						<th>접수일자<span style="color:red">*</span></th>
+						<td>
+							<t:fm type="DATIME7" value="${detail.RCPT_DT }"/>
+							<input type="hidden" name="rcpt_dt_date" id="rcpt_dt_date" value="${not empty detail.TASK_SEQ ? detail.RCPT_DT_DATE : '' }" />
+							<input type="hidden" name="rcpt_dt_hour" id="rcpt_dt_hour" value="${not empty detail.TASK_SEQ ? detail.RCPT_DT_HOUR : '' }" />
+							<input type="hidden" name="rcpt_dt_minute" id="rcpt_dt_minute" value="${not empty detail.TASK_SEQ ? detail.RCPT_DT_MINUTE : '' }" />
+						</td>
+						<th>접수자</th>
+						<td>
+							<!-- ${detail.RCPT_ADMIN_NM } -->
+							<c:if test="${detail.RCPT_ADMIN_NO == '99921'}">이재훈</c:if>
+							<c:if test="${detail.RCPT_ADMIN_NO == '99924'}">김법재</c:if>
+							<c:if test="${detail.RCPT_ADMIN_NO == '99927'}">이우철</c:if>
+							<c:if test="${detail.RCPT_ADMIN_NO == '99925'}">정현아</c:if>
+							<c:if test="${detail.RCPT_ADMIN_NO == '202202'}">김법재(은행)</c:if>
+							<c:if test="${detail.RCPT_ADMIN_NO == '201603'}">박지민(은행)</c:if>
+							<input type="hidden" name="rcpt_admin_no" id="rcpt_admin_no" value="${not empty detail.TASK_SEQ ? detail.RCPT_ADMIN_NO : '' }" />
+						</td>
+					</tr>
+					<tr>
+						<th>개발예상기간</th>
+						<td>
+							${detail.APPLY_DCNT}일
+							<input type="hidden" name="apply_dcnt" id="apply_dcnt" value="${not empty detail.TASK_SEQ ? detail.APPLY_DCNT : '' }" />
+						</td>
+						<th>개발완료가능일자</th>
+						<td>
+							<t:fm type="DATIME7" value="${detail.CPLT_PSB_DT }"/>
+							<input type="hidden" name="cplt_psb_dt_date" id="cplt_psb_dt_date" value="${not empty detail.TASK_SEQ ? detail.CPLT_PSB_DT_DATE : '' }" />
+							<input type="hidden" name="cplt_psb_dt_hour" id="cplt_psb_dt_hour" value="${not empty detail.TASK_SEQ ? detail.CPLT_PSB_DT_HOUR : '' }" />
+							<input type="hidden" name="cplt_psb_dt_minute" id="cplt_psb_dt_minute" value="${not empty detail.TASK_SEQ ? detail.CPLT_PSB_DT_MINUTE : '' }" />
+						</td>
+					</tr>
+					<tr>
+						<th>개발시작일자</th>
+						<td>
+							<t:fm type="DATIME7" value="${detail.START_DT }"/>
+							<input type="hidden" name="start_dt_date" id="start_dt_date" value="${not empty detail.TASK_SEQ ? detail.START_DT_DATE : '' }" />
+							<input type="hidden" name="start_dt_hour" id="start_dt_hour" value="${not empty detail.TASK_SEQ ? detail.START_DT_HOUR : '' }" />
+							<input type="hidden" name="start_dt_minute" id="start_dt_minute" value="${not empty detail.TASK_SEQ ? detail.START_DT_MINUTE : '' }" />
+						</td>
+						<th>개발완료일자</th>
+						<td>
+							<t:fm type="DATIME7" value="${detail.END_DT }"/>
+							<input type="hidden" name="end_dt_date" id="end_dt_date" value="${not empty detail.TASK_SEQ ? detail.END_DT_DATE : '' }" />
+							<input type="hidden" name="end_dt_hour" id="end_dt_hour" value="${not empty detail.TASK_SEQ ? detail.END_DT_HOUR : '' }" />
+							<input type="hidden" name="end_dt_minute" id="end_dt_minute" value="${not empty detail.TASK_SEQ ? detail.END_DT_MINUTE : '' }" />
+						</td>
+					</tr>
+					<tr>
+						<th>반영예정일자</th>
+						<td>
+							<t:fm type="DATIME7" value="${detail.UPDATE_APPLY_DT }"/>
+							<input type="hidden" name="update_apply_dt_date" id="update_apply_dt_date" value="${not empty detail.TASK_SEQ ? detail.UPDATE_APPLY_DT_DATE : '' }" />
+							<input type="hidden" name="update_apply_dt_hour" id="update_apply_dt_hour" value="${not empty detail.TASK_SEQ ? detail.UPDATE_APPLY_DT_HOUR : '' }" />
+							<input type="hidden" name="update_apply_dt_minute" id="update_apply_dt_minute" value="${not empty detail.TASK_SEQ ? detail.UPDATE_APPLY_DT_MINUTE : '' }" />
+						</td>
+						<th>반영완료일자</th>
+						<td>
+							<t:fm type="DATIME7" value="${detail.UPDATE_END_DT }"/>
+							<input type="hidden" name="update_end_dt_date" id="update_end_dt_date" value="${not empty detail.TASK_SEQ ? detail.UPDATE_END_DT_DATE : '' }" />
+							<input type="hidden" name="update_end_dt_hour" id="update_end_dt_hour" value="${not empty detail.TASK_SEQ ? detail.UPDATE_END_DT_HOUR : '' }" />
+							<input type="hidden" name="update_end_dt_minute" id="update_end_dt_minute" value="${not empty detail.TASK_SEQ ? detail.UPDATE_END_DT_MINUTE : '' }" />
+						</td>
+					</tr>
+					<tr>
+						<th>처리내용</th>
+						<td colspan="3"><textarea name="proc_content" id="proc_content" class="form-control input-ssm" rows="6" readonly>${detail.PROC_CONTENT }</textarea></td>
+					</tr>
+					<tr>
+						<th>처리상태<span style="color:red">*</span></th>
+						<td>
+							${detail.PROC_STATE_NM }
+						</td>
+						<th>처리자<span style="color:red">*</span></th>
+						<td>
+							<!-- ${detail.PROC_ADMIN_NM } -->
+							<c:if test="${detail.PROC_ADMIN_NO == '99921'}">이재훈</c:if>
+							<c:if test="${detail.PROC_ADMIN_NO == '99924'}">김법재</c:if>
+							<c:if test="${detail.PROC_ADMIN_NO == '99927'}">이우철</c:if>
+							<c:if test="${detail.PROC_ADMIN_NO == '99925'}">정현아</c:if>
+							<c:if test="${detail.RCPT_ADMIN_NO == '202202'}">김법재(은행)</c:if>
+							<c:if test="${detail.RCPT_ADMIN_NO == '201603'}">박지민(은행)</c:if>
+							<input type="hidden" name="proc_admin_no" id="proc_admin_no" value="${not empty detail.TASK_SEQ ? detail.PROC_ADMIN_NO : '' }" />
+						</td>
+					</tr>
+					<tr>
+						<th>업무처리구분</th>
+						<td colspan="3">
+							${detail.RANGE_NM }
+							<input type="hidden" name="range_cd" id="range_cd" value="${not empty detail.TASK_SEQ ? detail.RANGE_CD : '' }" />
+						</td>
+					</tr>
+				</table>
+
+				<br>
+				
+                </c:if>
+                
+                <div style="width:98%;">
+                	<div style="width:50%; float:left;"><h4>■ 첨부파일</h4></div>
+                	<div style="width:50%; float:left; text-align:right;" id="button-delete-file-div"><button type="button" id="button-delete-file" class="btn btn-default">첨부파일 삭제</button></div>                		
+                </div>
+                <table style="width:98%;" class="table table-bordered" id="file_table" style="margin-bottom: 0px;">
+					<colgroup>
+						<col width="5%"></col>
+						<col width="30%"></col>
+						<col width="15%"></col>
+						<col width="20%"></col>
+						<col width="20%"></col>
+						<col width="10%"></col>
+					</colgroup> 
+					<tr>
+						<th style="text-align:center"><input type="checkbox" name="check_all" id="check_all" /></th>
+						<th style="text-align:center">제목</th>
+						<th style="text-align:center">구분항목</th>
+						<th style="text-align:center">등록일시</th>
+						<th style="text-align:center">등록자</th>
+						<th style="text-align:center">파일</th>
+					</tr>
+					<c:if test="${FileView ne '[]'}" >
+					<c:forEach  var="li"  items="${FileView}" varStatus="i">
+					<tr> 		
+						<td align="center">
+							<input type="checkbox" name="file_seq" value="${li.FILE_SEQ}"></input>									
+						</td>
+						<td align="center">${li.FILE_TITLE}</td>
+						<td align="center">${li.FILE_TYPE_NM}</td>
+						<td align="center"><t:fm type="DATE" value="${li.CRE_DT}" /></td>
+						<td align="center">${li.CRE_ID_NM}</td>
+						<!-- <td align="center"><img src="/images/common/doc_link.gif" alt="${li.FILE_SIZE/1024} KB" class="IMG_B" onclick="openImage('${li.SVR_DIR}', '${li.SVR_FILE_NM}', '', '01')"/></td> -->
+						<td align="center"><img src="/images/common/doc_link.gif" alt="${li.FILE_SIZE/1024} KB" class="IMG_B" onclick="openTaskReqPWCheck('${detail.TASK_SEQ }', '${detail.FILE_PWD }', '${li.SVR_DIR}', '${li.SVR_FILE_NM}', '', '01')"/></td>
+					</tr>
+					</c:forEach>
+					</c:if>
+					<c:if test="${FileView eq '[]'}" >
+						<td colspan="6" align="center">첨부파일이 없습니다.<input type="hidden" id="notExists" name="notExists"/></td>								
+					</c:if>							
+				</table>
+				
+					<div style="text-align: center; padding-top: 5px;">
+						<c:if test="${detail.TASK_SEQ ne null}">
+							<button type="button" id="button-HstList" class="btn btn-default">이력보기</button>
+						</c:if>
+						<input type="button" name="button-save-openFile" class="btn btn-default" value="파일첨부" onclick="javascript:openFile('${detail.TASK_SEQ}')">
+						
+						<c:choose>
+							<c:when test="${sessionScope.ss_user.role_cd == '09' && (detail.PROC_STATE_CD eq '015' || detail.PROC_STATE_CD0 eq '016')}">
+							
+							</c:when>
+							<c:otherwise>
+								<button type="button" id="button-save-detail" class="btn btn-default">${detail.TASK_SEQ eq NULL ? '등록' : '수정' }</button>
+							</c:otherwise>
+						</c:choose>
+						<c:if test="${detail.TASK_SEQ ne null && sessionScope.ss_user.role_cd == '08'}">
+							<button type="button" id="button-delete" class="btn btn-default">삭제</button>
+						</c:if>				
+						<!-- <input type="button" name="button-list" id="button-list" class="btn btn-default" value="목 록" onclick="goList();"> -->
+						<input type="button" name="closebtn" class="btn btn-default" value="닫  기" onclick="javascript:self.close();">
+					</div>
+				
+				
+			
+		</form>
+	</div>
+	
+<script type="text/javascript" src="${pageContext.request.contextPath }/jquery/js/jquery-1.11.2.min.js"></script>
+<script type="text/javascript" src="${pageContext.request.contextPath }/jquery/js/jquery-ui.min.js"></script>
+<script type="text/javascript" src="${pageContext.request.contextPath }/jquery/js/jquery.ui.datepicker-ko.js"></script>
+<script type="text/javascript" src="${pageContext.request.contextPath }/jquery/js/jquery.mask.min.js"></script>
+<script type="text/javascript">
+	$(document).ready(function() {
+	    	
+		maskForm();
+		$(".date").datepicker();
+		$("#button-save-detail").on("click", taskReqSave);
+		$("#button-save-openFile").on("click", openFile);
+		$("#button-delete").on("click", taskReqDelete);
+		$("#button-HstList").on("click", taskReqHstList);
+		$("#button-delete-file").on("click", deleteFile);
+		$("#button-date-set").on("click", dateSet);
+		$("#button-testdate-set").on("click", testDateSet);
+		$("#button-allDate-set").on("click", AllDateSet);
+		$("#button-req-set").on("click", taskReqSet);	//IT팀에서 사전요청->요청 처리.
+		$("#button-test-set").on("click", taskReqSet);	//테스트완료 처리
+		$("#sms_receive_yn").on("click", chkSms);	//SMS수신여부
+		 
+		// 고객지원요약 데이터 db에서 <br>태그와 함께 가지고옴 <br>태그 삭제하기
+		var textarea = $("#req_content").val();
+		textarea = textarea.replace(/<BR>/ig,"\n");
+		$("#req_content").val(textarea);
+		
+		//요청종류 : 자료요청인 경우 비밀번호 입력.
+		chkFilePwd();
+		
+		var TASK_SEQ = "${detail.TASK_SEQ}";
+		if(TASK_SEQ == ""){
+			
+			//등록화면 디폴트값
+			/* if($("#sys_cd").val() == ""){
+				$("#sys_cd").val("003");	//003:FILS
+			} */
+			if($("#proc_state_cd").val() == ""){
+				$("#proc_state_cd").val("010");	//[Z_924]
+			}
+			if($("#settle_admin_no").val() == ""){
+				$("#settle_admin_no").val("99921");
+			}
+			/* if($("#rcpt_cd").val() == ""){
+				$("#rcpt_cd").val("000");	//[Z_927] 000:SYS
+			} */
+			if($("#req_kind").val() == ""){
+				$("#req_kind").val("01");	//[Z_930] 01:업무요청
+			}
+			
+		/* 	if(${sessionScope.ss_user.role_cd} == '09') {
+				if($("#range_cd").val() == ""){
+					$("#range_cd").val("003");	//[Z_929] 003:Prog수정
+				}
+			} else {
+				if($("#range_cd").val() == ""){
+					$("#range_cd").val("000");	//[Z_929] 000:미지정
+				}
+			} */
+			
+		 	/* if(${sessionScope.ss_user.role_cd} == '09') {
+				if($("#req_range_cd").val() == ""){
+					$("#req_range_cd").val("003");	//[Z_929] 003:Prog수정
+				}
+			} else {
+				 if($("#req_range_cd").val() == ""){
+					$("#req_range_cd").val("003");	//[Z_929] 000:미지정
+				}
+			}  */
+		}
+		
+		
+		$("#check_all").click(function() {		
+			if($(this).is(':checked')){
+				$("input[name=file_seq]:checkbox").prop('checked', true);
+			}else{
+				$("input[name=file_seq]:checkbox").prop('checked', false);			
+			}
+		});
+		
+		if($("input[name=notExists]").length > 0){
+			$("#button-delete-file").hide();
+		}
+
+	});
+	
+	//저장 또는 수정
+	function taskReqSave() {
+		
+		unmaskForm();
+		
+		var task_seq = "${detail.TASK_SEQ}";
+		var role_cd = "${sessionScope.ss_user.role_cd}";
+		
+		// 요청일자
+		var req_dt_date = $("#req_dt_date");
+		var req_dt_hour = $("#req_dt_hour");
+		var req_dt_minute = $("#req_dt_minute");
+		
+		// 접수일자
+		var rcpt_dt_date = $("#rcpt_dt_date");
+		var rcpt_dt_hour = $("#rcpt_dt_hour");
+		var rcpt_dt_minute = $("#rcpt_dt_minute");
+		
+		// 개발완료가능일자
+		var cplt_psb_dt_date = $("#cplt_psb_dt_date");
+		var cplt_psb_dt_hour = $("#cplt_psb_dt_hour");
+		var cplt_psb_dt_minute = $("#cplt_psb_dt_minute");
+		
+		// 개발시작일자
+		var start_dt_date = $("#start_dt_date");
+		var start_dt_hour = $("#start_dt_hour");
+		var start_dt_minute = $("#start_dt_minute");
+		
+		// 개발완료일자
+		var end_dt_date = $("#end_dt_date");
+		var end_dt_hour = $("#end_dt_hour");
+		var end_dt_minute = $("#end_dt_minute");
+		
+		// 반영예정일자
+		var update_apply_dt_date = $("#update_apply_dt_date");
+		var update_apply_dt_hour = $("#update_apply_dt_hour");
+		var update_apply_dt_minute = $("#update_apply_dt_minute");
+			
+		// 반영완료일자
+		var update_end_dt_date = $("#update_end_dt_date");
+	 	var update_end_dt_hour = $("#update_end_dt_hour");
+	 	var update_end_dt_minute = $("#update_end_dt_minute");
+		
+		/////////////////////
+		
+		if(task_seq == '') {
+			/* var sys_cd = $("#sys_cd");
+			if (sys_cd.val() == "") {
+				alert("시스템을 선택해 주세요.");
+				maskForm();
+				return sys_cd.focus();
+			} */
+			
+			/* var rcpt_cd = $("#rcpt_cd");
+			if (rcpt_cd.val() == "") {
+				alert("요청구분을 선택해 주세요.");
+				maskForm();
+				return rcpt_cd.focus();
+			} */
+			
+			var req_kind = $("#req_kind");
+			if (req_kind.val() == "") {
+				alert("요청종류를 선택해 주세요.");
+				maskForm();
+				return req_kind.focus();
+			}
+			
+			var req_title = $("#req_title");
+			if (req_title.val() == "") {
+				alert("요청사항 제목을  입력해주세요.");
+				maskForm();
+				return req_title.focus();
+			}
+			
+			var req_content = $("#req_content");
+			if (req_content.val() == "") {
+				alert("요청사항 상세를  입력해주세요.");
+				maskForm();
+				return req_content.focus();
+			}
+			
+			if(role_cd != '09') {
+				var proc_state_cd = $("#proc_state_cd");
+				if (proc_state_cd.val() == "") {
+					alert("요청상태를 선택해 주세요.");
+					maskForm();
+					return proc_state_cd.focus();
+				}
+			}
+			//var req_range_cd = $("#req_range_cd");
+			//if (req_range_cd.val() == "") {
+			//	alert("요청종류상세룰 선택해 주세요.");
+			//	return req_range_cd.focus();
+			//}
+
+			if(req_kind.val() == '02') {
+				var file_pwd = $("#file_pwd");
+				if (file_pwd.val() == "") {
+					alert("자료요청인 경우 비밀번호를 입력해주세요.");
+					maskForm();
+					return file_pwd.focus();
+				}
+				
+				if(file_pwd.val().length < 4) {
+					alert("비밀번호는 4~6자리 입력해주세요.");
+					maskForm();
+					return file_pwd.focus();
+				}
+			}
+			
+			
+			if(role_cd == '09') {
+				
+				var proc_state_cd = $("#proc_state_cd");
+				if (proc_state_cd.val() == "") {
+					alert("처리상태를 선택해 주세요.");
+					maskForm();
+					return proc_state_cd.focus();
+				}
+				
+				if(proc_state_cd.val() == "001") {
+					
+					if(rcpt_dt_date.val() == "") {
+						alert("접수일자를 선택해 주세요.");
+						maskForm();
+						return rcpt_dt_date.focus();
+					}
+					
+					if(rcpt_dt_hour.val() == "") {
+						alert("접수시간을 선택해 주세요.");
+						maskForm();
+						return rcpt_dt_hour.focus();
+					}
+					
+					if(rcpt_dt_minute.val() == "") {
+						alert("접수시간을 선택해 주세요.");
+						maskForm();
+						return rcpt_dt_minute.focus();
+					}
+					
+					var proc_admin_no = $("#proc_admin_no");
+					if (proc_admin_no.val() == "") {
+						alert("처리자를 선택해 주세요.");
+						maskForm();
+						return proc_admin_no.focus();
+					}
+					
+					var proc_admin_no = $("#proc_admin_no");
+					if (proc_admin_no.val() == "") {
+						alert("처리자를 선택해 주세요.");
+						maskForm();
+						return proc_admin_no.focus();
+					}
+					
+				}
+				
+			}
+			
+			
+		} else {
+			
+			var req_kind = $("#req_kind");
+			if (req_kind.val() == "") {
+				alert("요청종류를 선택해 주세요.");
+				maskForm();
+				return req_kind.focus();
+			}
+			
+			if(req_kind.val() == '02') {
+				var file_pwd = $("#file_pwd");
+				if (file_pwd.val() == "") {
+					alert("자료요청인 경우 비밀번호를 입력해주세요.");
+					maskForm();
+					return file_pwd.focus();
+				}
+			}
+			
+			if(role_cd == '09') {
+				 var proc_state_cd = $("#proc_state_cd");
+				 
+				// 사전요청 , 보류 , 제외건이 아닌경우
+				if (proc_state_cd.val() != "010" && proc_state_cd.val() != "003" && proc_state_cd.val() != "004"){
+						
+					 if(rcpt_dt_date.val() == "") {
+							alert("접수일자를 선택해 주세요.");
+							maskForm();
+							return rcpt_dt_date.focus();
+						}
+						
+						if(rcpt_dt_hour.val() == "") {
+							alert("접수시간을 선택해 주세요.");
+							maskForm();
+							return rcpt_dt_hour.focus();
+						}
+						
+						if(rcpt_dt_minute.val() == "") {
+							alert("접수시간을 선택해 주세요.");
+							maskForm();
+							return rcpt_dt_minute.focus();
+						}
+						
+						
+						if (proc_state_cd.val() == "") {
+							alert("처리상태를 선택해 주세요.");
+							maskForm();
+							return proc_state_cd.focus();
+						}
+						
+						var proc_admin_no = $("#proc_admin_no");
+						if (proc_admin_no.val() == "") {
+							alert("처리자를 선택해 주세요.");
+							maskForm();
+							return proc_admin_no.focus();
+						}
+						var settle_state_cd = $("#settle_state_cd");
+						if (settle_state_cd.val() == "") {
+							alert("결재진행상태를 선택해 주세요.");
+							maskForm();
+							return settle_state_cd.focus();
+						}
+						var range_cd = $("#range_cd");
+						if (range_cd.val() == "") {
+							alert("업무처리구분을 선택해 주세요.");
+							return range_cd.focus();
+						}
+				 }else{
+						
+					    var proc_admin_no = $("#proc_admin_no");
+						if (proc_admin_no.val() == "") {
+							alert("처리자를 선택해 주세요.");
+							maskForm();
+							return proc_admin_no.focus();
+						}
+					 
+				 }
+				
+			}
+			
+		}
+		
+		// 사전요청 , 보류 , 제외건이 아닌경우
+		//if (proc_state_cd.val() != "010" && proc_state_cd.val() != "003" && proc_state_cd.val() != "004"){
+			var proc_state_cd = $("#proc_state_cd option:selected");
+			
+			var company_cd = $("#company_cd").val();
+			
+			
+			//  날짜 취합 (시초값 셋팅)
+			$("#req_dt").val(req_dt_date.val() + req_dt_hour.val() + req_dt_minute.val());
+			$("#rcpt_dt").val(rcpt_dt_date.val() + rcpt_dt_hour.val() + rcpt_dt_minute.val());
+			$("#start_dt").val(start_dt_date.val() + start_dt_hour.val() + start_dt_minute.val());
+			$("#end_dt").val(end_dt_date.val() + end_dt_hour.val() + end_dt_minute.val());
+			$("#cplt_psb_dt").val(cplt_psb_dt_date.val() + cplt_psb_dt_hour.val() + cplt_psb_dt_minute.val());
+			$("#update_apply_dt").val(update_apply_dt_date.val() + update_apply_dt_hour.val() + update_apply_dt_minute.val());
+			$("#update_end_dt").val(update_end_dt_date.val() + update_end_dt_hour.val() + update_end_dt_minute.val());
+			
+			//alert("1>"+$("#req_dt").val());
+			//alert("1>"+$("#rcpt_dt").val());
+			
+			// 년월일 입력시 디폴트 시분초 셋팅
+			if(req_dt_date.val()=="" && req_dt_hour.val()=="" && req_dt_minute.val()=="") {
+				defaultSet(req_dt_date,${DATE});
+				defaultSet(req_dt_hour,${HOUR});
+				defaultSet(req_dt_minute,"00");
+				$("#req_dt").val(req_dt_date.val() + req_dt_hour.val() + req_dt_minute.val() + "00");
+			}
+			
+			if(!cplt_psb_dt_date.val()=="" && cplt_psb_dt_hour.val()=="" && cplt_psb_dt_minute.val()=="") {
+				defaultSet(cplt_psb_dt_hour,"18");
+				defaultSet(cplt_psb_dt_minute,"00");
+				$("#cplt_psb_dt").val(cplt_psb_dt_date.val() + cplt_psb_dt_hour.val() + cplt_psb_dt_minute.val() + "00");
+			}
+			
+			if(!start_dt_date.val()=="" && start_dt_hour.val()=="" && start_dt_minute.val()=="") {
+				defaultSet(start_dt_hour,${HOUR});
+				defaultSet(start_dt_minute,"00");
+				$("#start_dt").val(start_dt_date.val() + start_dt_hour.val() + start_dt_minute.val() + "00");
+			}
+			
+			if(!end_dt_date.val()=="" && end_dt_hour.val()=="" && end_dt_minute.val()=="") {
+				defaultSet(end_dt_hour,"18");
+				defaultSet(end_dt_minute,"00");
+				$("#end_dt").val(end_dt_date.val() + end_dt_hour.val() + end_dt_minute.val() + "00");
+			}
+			
+			if(!update_apply_dt_date.val()=="" && update_apply_dt_hour.val()=="" && update_apply_dt_minute.val()=="") {
+				defaultSet(update_apply_dt_hour,"18");
+				defaultSet(update_apply_dt_minute,"00");
+				$("#update_apply_dt").val(update_apply_dt_date.val() + update_apply_dt_hour.val() + update_apply_dt_minute.val() + "00");
+			}
+			
+			if(!update_end_dt_date.val()=="" && update_end_dt_hour.val()=="" && update_end_dt_minute.val()=="") {
+				defaultSet(update_end_dt_hour,"18");
+				defaultSet(update_end_dt_minute,"00");
+				$("#update_end_dt").val(update_end_dt_date.val() + update_end_dt_hour.val() + update_end_dt_minute.val() + "00");
+			}
+			
+			
+			// 개발완료
+			if(proc_state_cd.val() == "012"){
+				/*
+				if(cplt_psb_dt_date.val()=="") {
+					alert("[개발완료]로 처리하실경우 개발완료예정일자를 입력해주세요.");
+					maskForm();
+					return cplt_psb_dt_date.focus();
+				}*/
+				
+				if(start_dt_date.val()=="") {
+					alert("[개발완료]로 처리하실경우 개발시작일자를 입력해주세요.");
+					maskForm();
+					return start_dt_date.focus();
+				}
+				
+				if(end_dt_date.val()=="") {
+					alert("[개발완료]로 처리하실경우 개발완료일자를 입력해주세요.");
+					maskForm();
+					return end_dt_date.focus();
+				}
+				
+				if($("#end_dt_date").val() != ""){
+					if($("#start_dt_date").val() > $("#end_dt_date").val()){
+						alert("개발완료일자가 개발시작일자 보다 더 이후 여야 합니다.");
+						maskForm();
+						return end_dt_date.focus();
+					}
+				}
+				
+			}
+			
+			// 완료
+			if(proc_state_cd.val() == "009"){
+				
+				if(update_end_dt_date.val()=="") {
+					alert("[완료]로 처리하실경우 반영완료일자를 입력해주세요.");
+					maskForm();
+					return update_end_dt_date.focus();
+				} else {
+					if(start_dt_date.val()=="") {
+						alert("개발시작일자를 입력해주세요.");
+						maskForm();
+						return start_dt_date.focus();
+					}
+					
+					if(end_dt_date.val()=="") {
+						alert("개발완료일자를 입력해주세요.");
+						maskForm();
+						return end_dt_date.focus();
+					}
+					
+					if(update_apply_dt_date.val()=="") {
+						alert("반영예정일자를 입력해주세요.");
+						maskForm();
+						return update_apply_dt_date.focus();
+					}
+				}
+			}
+			
+			if($("#rcpt_dt").val() != "" && $("#end_dt").val() != ""){
+				if($("#rcpt_dt").val() > $("#end_dt").val()){
+					alert("개발완료일자가 접수일자 보다 더 이후 여야 합니다.");
+					maskForm();
+					return end_dt_date.focus();
+				}
+			}
+			if($("#rcpt_dt").val() != "" && $("#update_end_dt").val() != ""){
+				if($("#rcpt_dt").val() > $("#update_end_dt").val()){
+					alert("반영완료일자가 접수일자 보다 더 이후 여야 합니다.");
+					maskForm();
+					return update_end_dt_date.focus();
+				}
+			}
+			if($("#rcpt_dt").val() != "" && $("#cplt_psb_dt").val() != ""){
+				if($("#rcpt_dt").val() > $("#cplt_psb_dt").val()){
+					alert("개발완료가능일자가 접수일자 보다 더 이후 여야 합니다.");
+					maskForm();
+					return cplt_psb_dt_date.focus();
+				}
+			}
+			if($("#rcpt_dt").val() != "" && $("#update_apply_dt").val() != ""){
+				if($("#rcpt_dt").val() > $("#update_apply_dt").val()){
+					alert("반영예정일자가 접수일자 보다 더 이후 여야 합니다.");
+					maskForm();
+					return update_apply_dt_date.focus();
+				}
+			}
+			
+			
+			// 최종 날짜 취합
+			if(req_dt_date.val() != "" && req_dt_hour.val() != "" && req_dt_minute.val() != ""){
+				$("#req_dt").val(req_dt_date.val() + req_dt_hour.val() + req_dt_minute.val() + "00");
+			}
+			
+			if(rcpt_dt_date.val() != "" && rcpt_dt_hour.val() != "" && rcpt_dt_minute.val() != ""){
+				$("#rcpt_dt").val(rcpt_dt_date.val() + rcpt_dt_hour.val() + rcpt_dt_minute.val() + "00");
+			}
+			
+			if(start_dt_date.val() != "" && start_dt_hour.val() != "" && start_dt_minute.val() != ""){
+				$("#start_dt").val(start_dt_date.val() + start_dt_hour.val() + start_dt_minute.val() + "00");
+			}
+			
+			if(end_dt_date.val() != "" && end_dt_hour.val() != "" && end_dt_minute.val() != ""){
+				$("#end_dt").val(end_dt_date.val() + end_dt_hour.val() + end_dt_minute.val() + "00");
+			}
+			
+			if(cplt_psb_dt_date.val() != "" && cplt_psb_dt_hour.val() != "" &&cplt_psb_dt_minute.val() != ""){
+				$("#cplt_psb_dt").val(cplt_psb_dt_date.val() + cplt_psb_dt_hour.val() + cplt_psb_dt_minute.val() + "00");
+			}
+			
+			if(update_apply_dt_date.val() != "" && update_apply_dt_hour.val() != "" && update_apply_dt_minute.val() != ""){
+				$("#update_apply_dt").val(update_apply_dt_date.val() + update_apply_dt_hour.val() + update_apply_dt_minute.val() + "00");
+			}
+			
+			if(update_end_dt_date.val() != "" && update_end_dt_hour.val() != "" && update_end_dt_minute.val() != ""){
+				$("#update_end_dt").val(update_end_dt_date.val() + update_end_dt_hour.val() + update_end_dt_minute.val() + "00");
+			}
+		///}
+
+		var msg = "";
+		if($("#task_seq").val()==""){
+			msg = "저장";
+		}else{
+			msg = "수정";
+		}
+			
+		var data = $("#userForm").serialize();
+			
+		maskForm();
+		
+		// 전산팀 요청상태 초기화
+		$("#it_proc_state_cd").val("");
+		
+	   	if( confirm( msg + "하시겠습니까?") ) {
+	        $.ajax({
+				url: "/taskreq/taskReqProc.do",
+				type: "post",
+				data: data
+			}).done(function() {
+				alert( msg + "되었습니다.");
+				
+				//location.href='/taskreq/taskReqList.do';
+				
+				if (opener && opener.goSearch) {
+					opener.goSearch();
+				}
+				self.close();
+			
+			}).fail(failsaveRequireGetNew);
+		}
+	}
+	
+	//삭제
+	function taskReqDelete() {
+		var data = $("#userForm").serialize();
+		if( confirm( "삭제하시겠습니까?" ) ) {
+	        $.ajax({
+				url: "/taskreq/taskReqDelete.do",
+				type: "post",
+				data: data
+			}).done(function() {
+				alert("삭제되었습니다.");
+				
+				//location.href='/taskreq/taskReqList.do';
+				
+				if (opener && opener.goSearch) {
+					opener.goSearch();
+				}
+				self.close();
+				
+			}).fail(failsaveRequireGetNew);
+		} 
+	}
+	
+	function taskReqSet() {
+		
+		
+		unmaskForm();
+		
+		var val = $("#button-req-set").val();
+		var proc_state_cd = $("#proc_state_cd").val();
+		if(val == '요청처리') {
+			$("#proc_gubun").val('1');
+			
+			// 처리사항 상태값 초기화
+			$("#proc_state_cd").val("");
+			
+			//요청인경우
+			if(proc_state_cd ="000"){
+				// 전산팀 즉시처리
+				var direct_check_yn = $("input:checkbox[id='direct_check_box']").is(":checked");
+				
+				if(direct_check_yn == true){
+					direct_check_yn ="Y";
+				}else{
+					direct_check_yn ="N";
+				}
+				$("#direct_check_yn").val(direct_check_yn);
+			}
+			
+		}
+		if(val == '테스트완료처리') {
+			$("#proc_gubun").val('2');
+			$("#proc_state_cd").val('013');
+			
+			// 테스트완료일자
+			var test_end_dt_date = $("#test_end_dt_date");
+			var test_end_dt_hour = $("#test_end_dt_hour");
+			var test_end_dt_minute = $("#test_end_dt_minute");
+			
+			if(test_end_dt_date.val() == '') {
+				alert("테스트완료일자를 선택하세요.");
+				maskForm();
+				return test_end_dt_date.focus();
+			}
+			
+			//  날짜 취합 (시초값 셋팅)
+			$("#test_end_dt").val(test_end_dt_date.val() + test_end_dt_hour.val() + test_end_dt_minute.val() + "00");
+			
+			//alert($("#start_dt").val());
+			
+			if($("#test_end_dt").val() != ""){
+				if($("#start_dt").val() > $("#test_end_dt").val()){
+					alert("테스트완료일자는 개발시작일자 보다 더 이후 여야 합니다.");
+					maskForm();
+					return test_end_dt_date.focus();
+				}
+			}
+		}
+
+		var data = $("#userForm").serialize();
+
+		if( confirm( val+" 하시겠습니까?" ) ) {
+	        $.ajax({
+				url: "/taskreq/taskReqSet.do",
+				type: "post",
+				data: data
+			}).done(function() {
+				alert("처리되었습니다.");
+				
+				//location.href='/taskreq/taskReqList.do';
+				
+				if (opener && opener.goSearch) {
+					opener.goSearch();
+				}
+				self.close();
+				
+			}).fail(failsaveRequireGetNew);
+		}
+	}
+	
+	//첨부파일 팝업
+	function openFile(seq){
+		s_width = 600 ;
+		s_height= screen.height;
+		s_height= s_height - 480;
+		
+		var frm = document.userForm;
+		var req_kind = $("#req_kind").val();
+		
+		if($("#req_kind").val() == '') {
+			alert("요청종류를 선택하세요.");
+			return $("#req_kind").focus();
+		}
+
+		window.open("/loanAppFileViewNew.do?task_seq="+seq+"&req_kind="+req_kind+"&channel=new"
+					, "FileView"+ seq
+					, "width="+s_width+",height="+s_height+", toolbar=0, status=no, top=0, left=0, resizable=yes, scrollbars=yes");
+	}
+	
+	//첨부문서 열기
+	function openImage(dir, file, uri, type){
+		var url = "";
+		var params = "";
+		
+		if(type == '01'){
+			params = "?dir="+dir+"&file="+file;
+			url = "/common/ViewImageNew.jsp"+params;
+		} else {
+			url = uri;
+		}
+		//var url = uri;
+
+		s_width = screen.width ;
+		s_height= screen.height ;
+
+		if(s_width > 1024) s_width = 964;
+		else s_width = (screen.width) - 60 ;
+
+		s_height= s_height - 100 ;
+
+		window.open(url
+			, "openImage"
+			, "width="+s_width+",height="+s_height+", toolbar=0, status=0, top=5, left=5, resizable=1, scrollbars=1"
+		);
+		
+		
+		
+	}
+	
+	//이력보기
+	function taskReqHstList() {
+		var frm = document.userForm;
+    
+	    window.open("", "frmHstList", "width=1000,height=665, top=0,left=0, toolbar=no,location=no,status=no,menubar=no,resizable=no,scrollbars=yes");
+
+	    frm.action = "/taskreq/taskReqHstListPopup.do";    
+	    frm.target = "frmHstList";
+	    frm.method = "post";
+		frm.submit();
+	}
+	
+	
+	function failsaveRequireGetNew() {
+		alert("처리 중 오류가 발생하였습니다.");
+	}
+	
+	function maskForm() {
+		$(".date").mask("0000-00-00");
+	}
+	
+	function unmaskForm() {
+		$(".date").unmask();
+	}
+	
+	//첨부파일 삭제
+	function deleteFile() {		
+		var frm = document.userForm;
+		
+		var cnt = $("input[name=file_seq]:checkbox:checked").length;
+		
+		if(cnt == 0) {
+   			alert("1개 이상의 첨부파일을 선택하세요.");
+   			return;
+       	}
+		
+		if(confirm("첨부파일을 삭제 하시겠습니까?")) {
+			frm.target="ifr_cd";
+			frm.action="/loanAppFileDeleteNew.do";
+			frm.submit();
+		}
+		
+	}
+	
+	//일자셋팅 (테스트완료일자)
+	function testDateSet(){
+		$("#test_end_dt_date").val(${DATE});
+		$("#test_end_dt_hour").val(${HOUR});
+		$("#test_end_dt_minute").val("00");
+		maskForm();
+	}
+	
+	//일자셋팅 (개발완료가능일자)
+	function dateSet(){
+		$("#cplt_psb_dt_date").val(${DATE});
+		$("#cplt_psb_dt_hour").val("19");
+		$("#cplt_psb_dt_minute").val("00");
+		maskForm();
+	}
+	
+	//전체 일자 셋팅
+	function AllDateSet(){
+		
+		var update_end_dt_date = $("#update_end_dt_date").val();
+		var update_end_dt_hour = $("#update_end_dt_hour").val();
+		var update_end_dt_minute = $("#update_end_dt_minute").val();
+		
+		if(update_end_dt_date == '') {
+			return alert("반영완료일자를 선택하세요.");
+		}
+		
+		//개발시작일자
+		$("#start_dt_date").val(update_end_dt_date);
+		$("#start_dt_hour").val(update_end_dt_hour);
+		$("#start_dt_minute").val(update_end_dt_minute);
+		
+		//개발완료일자
+		$("#end_dt_date").val(update_end_dt_date);
+		$("#end_dt_hour").val(update_end_dt_hour);
+		$("#end_dt_minute").val(update_end_dt_minute);
+		
+		//반영예정일자
+		$("#update_apply_dt_date").val(update_end_dt_date);
+		$("#update_apply_dt_hour").val(update_end_dt_hour);
+		$("#update_apply_dt_minute").val(update_end_dt_minute);
+		
+		/*
+		//반영완료일자
+		$("#update_end_dt_date").val(${DATE});
+		$("#update_end_dt_hour").val("18");
+		$("#update_end_dt_minute").val("00");
+		
+		//개발시작일자
+		$("#start_dt_date").val(${DATE});
+		$("#start_dt_hour").val("18");
+		$("#start_dt_minute").val("00");
+		
+		//개발완료일자
+		$("#end_dt_date").val(${DATE});
+		$("#end_dt_hour").val("18");
+		$("#end_dt_minute").val("00");
+		
+		//반영예정일자
+		$("#update_apply_dt_date").val(${DATE});
+		$("#update_apply_dt_hour").val("18");
+		$("#update_apply_dt_minute").val("00");
+		*/
+		
+		maskForm();
+	}
+	
+	//액션 후 reload
+	function goReload(val1,val2,val3,val4,val5,val6,val7,val8,val9){
+		var str = 'align="center"';
+		var val8 = "''";
+		var val9 = "'01'";
+		
+		if($("input[name=notExists]").length > 0){
+			$("#notExists").parent().parent().remove();
+			
+			//$('#button-delete-file-div').append('<button type='+'"button"'+' id='+'"button-delete-file"'+' class='+'"btn btn-default"'+'>첨부파일 삭제</button>');
+			$("#button-delete-file").show();
+		}
+		
+		$('#file_table > tbody:last').append('<tr><td '+str+'><input type="checkbox" name="file_seq" value="'+val1+'" checked></input></td><td '+str+'>'
+				                                       +val2+'</td><td '+str+'>'
+				                                       +val3+'</td><td '+str+'>'
+				                                       +val4+'</td><td '+str+'>'
+				                                       +val5+'</td><td '+str+'><img src="/images/common/doc_link.gif" class="IMG_B" onclick="openImage('
+				                                       +"'"+val6+"'"+','+"'"+val7+"'"+','+val8+','+val9+')"/></td></tr>');
+		
+	}
+	
+	function responseDel(rs){
+		
+		if(rs == "fail"){
+			alert("첨부파일 삭제중 일부 error가 발생하여 페이지 reload 수행합니다.\n 수정중인 edit값은 초기화 됩니다.\n지속적으로 error가 발생하면 관리자에게 문의 하세요.");
+			var frm = document.userForm;
+			frm.target = "_self";
+			frm.action = "/taskreq/taskReqView.do";
+			frm.submit();
+		}
+		
+		$("input[name=file_seq]").each(function() {//입력 확인
+			if($(this).is(':checked')){
+				$(this).parent().parent().remove();
+			}
+		});
+		
+		if($("input[name=file_seq]").length == 0){
+			$("#button-delete-file").hide();
+			$('#file_table > tbody:last').append('<tr><td colspan='+'"6"'+'  align='+'"center"'+' >첨부파일이 없습니다. '+'<input type='+'"hidden"'+' id='+'"notExists"'+' name='+'"notExists"'+'/></td></tr>');
+		}
+		
+	}
+	
+	function reload(){
+		var frm = document.userForm;			
+		frm.target="_self";
+		frm.action="/taskreq/taskReqView.do";
+		frm.submit();
+	}
+	
+	function defaultSet(id,setValue){
+		id.val(setValue);
+	}
+	
+	//개발예상기간
+	$("#apply_dcnt").on("change", function() {
+		
+		var frm = document.userForm;
+		
+		unmaskForm();
+		
+		var start_dt_date = $("#start_dt_date");
+		if(start_dt_date.val() != "") {
+			maskForm();
+			frm.target="ifr_cd";
+			frm.action="/taskreq/getBizDate.do";
+			frm.submit();
+		}
+		
+		/*
+		var data_all = $("#userForm").serialize();
+		
+		maskForm();
+		
+		$.ajax({
+			url: "/taskreq/getBizDate.do",
+			type: "post",
+			data: data_all
+			//data: { "apply_dcnt":$("#apply_dcnt").val(), "start_dt_date":$("#start_dt_date").val() }
+		}).done(function(data) {
+			//alert(data);
+			alert('${data.cplt_psb_dt_date}');
+			//alert( msg + "되었습니다.");
+			//setCpltPsbDt('20170317');
+		}).success(function(data) {
+			alert('12='+data);
+			//alert( msg + "되었습니다..");
+			setCpltPsbDt( data );
+		}).fail(failsaveRequireGetNew);
+		*/
+		
+		
+		
+	});
+	
+	//개발예상기간 및 개발시작일자 에 따라 개발완료가능일자 세팅
+	function setCpltPsbDt( dt ) {
+		$("#cplt_psb_dt_date").val(dt);
+		
+		maskForm();
+	}
+	
+	//테스트완료일자
+	$("#test_end_dt_date").on("change", function() {
+		$("#test_end_dt_hour").val(${HOUR});
+		$("#test_end_dt_minute").val("00");
+	});
+	
+	//접수일자
+	$("#rcpt_dt_date").on("change", function() {
+		$("#rcpt_dt_hour").val(${HOUR});
+		$("#rcpt_dt_minute").val(${MINUTE});
+	});
+	
+	//개발시작일자
+	$("#start_dt_date").on("change", function() {
+		$("#start_dt_hour").val(${HOUR});
+		$("#start_dt_minute").val("00");
+		
+		
+		var apply_dcnt = $("#apply_dcnt");
+		if(apply_dcnt.val() !== "") {
+			var frm = document.userForm;
+			unmaskForm();
+			frm.target="ifr_cd";
+			frm.action="/taskreq/getBizDate.do";
+			frm.submit();
+		}
+		
+		
+	});
+	
+	//개발완료일자
+	$("#end_dt_hour").on("change", function() {	
+		$("#end_dt_minute").val("00");
+	});
+	
+	//반영예정일자
+	$("#update_apply_dt_hour").on("change", function() {	
+		$("#update_apply_dt_minute").val("00");
+	});
+	
+	//반영완료일자
+	$("#update_end_dt_hour").on("change", function() {	
+		$("#update_end_dt_minute").val("00");
+	});
+	
+	
+	//자료요청인 경우 비밀번호 입력
+	function chkFilePwd() {
+		var frm = document.userForm;
+		
+		var req_kind = $("#req_kind").val();
+		//alert(req_kind);
+		if(req_kind == '01') {
+			$("#file_pwd").val("");
+			document.all.divFilePwd1.style.display = "none";
+			document.all.divFilePwd2.style.display = "none";
+		}else if(req_kind == '02') {
+			document.all.divFilePwd1.style.display = "block";
+			document.all.divFilePwd2.style.display = "block";
+		}
+	}
+	
+	//자료요청인 경우 비밀번호 입력 팝업창
+	function openTaskReqPWCheck(task_seq, file_pwd, dir, file, uri, type) {
+
+		//시스템관리자 또는 요청자=로그인자 이면 비밀번호 입력 생략.
+		if(${sessionScope.ss_user.role_cd =='09'} || (${sessionScope.ss_user.member_no} == '${detail.REQ_USER_NO}') ){
+			openImage(dir, file, uri, type);
+		}else{ 
+			var frm = document.userForm;
+			frm.task_seq.value = task_seq;
+			frm.file_pwd.value = file_pwd;
+			frm.dir.value = dir;
+			frm.file.value = file;
+			frm.uri.value = uri;
+			frm.type.value = type;
+			
+			var x;
+		  	var y;
+		 	x = (screen.availWidth-600)/2;
+		  	y = (screen.availHeight-500)/2;
+		   	  
+			window.open("", "taskReqPWCheck", "width=300, height=200 ,left="+x+",top="+y+" , toolbar=0, status=0, resizable=0, scrollbars=0, location=0");
+			
+			frm.action = "/taskreq/taskReqPWCheck.do";
+		    frm.target = "taskReqPWCheck";
+		    frm.method = "post";
+			frm.submit();
+		}
+	}
+	
+	//처리자 선택시 접수자 자동세팅
+	function setAdminNo() {
+		var frm = document.userForm;
+		var rcpt_admin_no = $("#rcpt_admin_no").val();
+		var proc_admin_no = $("#proc_admin_no").val();
+		
+		if(rcpt_admin_no == '' || rcpt_admin_no == null) {
+			$("#rcpt_admin_no").val(proc_admin_no);
+		}
+	}
+	
+	//목록으로
+	function goList() {
+		location.href = "/taskreq/taskReqList.do";
+	}
+	
+	//sms
+	function chkSms() {
+		var frm = document.userForm;
+		var mobile_no = '${sessionScope.ss_user.mobile_no}';
+		//alert(mobile_no);
+		
+		if(frm.sms_receive_yn.checked && (mobile_no == '' || mobile_no == null)) {
+			alert("사용자관리에서 휴대폰번호를 등록하세요.");
+			frm.sms_receive_yn.checked = false;
+			return;
+		}
+		
+		if(frm.sms_receive_yn.checked) frm.sms_receive_yn.value = "Y";
+		else frm.sms_receive_yn.value = "N";
+		
+		//alert(frm.sms_receive_yn.value);
+	}
+	
+</script>	
+<iframe name="ifr_cd" src="" width="0" scrolling="no" height="0" frameborder=0></iframe>
+</body>
+</html>
+
+###################################reqviews
+
+
+/** 
+ * ==================================================================
+ *
+ * (주)포이시스., Software License, Version 1.0
+ *
+ * Copyright (c) 2010 (주)포이시스.,
+ * 서울 금천구 가산동 371-28 우림라이온스밸리 B동 1412호
+ * All rights reserved. 
+ * 
+ * DON'T COPY OR REDISTRIBUTE THIS SOURCE CODE WITHOUT PERMISSION. 
+ * THIS SOFTWARE IS PROVIDED ''AS IS'' AND ANY EXPRESSED OR IMPLIED 
+ * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES 
+ * OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE 
+ * DISCLAIMED. IN NO EVENT SHALL (주)포이시스 OR ITS 
+ * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, 
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT 
+ * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF 
+ * USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+ * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, \
+ * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT 
+ * OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF 
+ * SUCH DAMAGE. 
+ * ==================================================================== 
+ * 
+ * For more information on this product, please see 
+ * http://www.foresys.co.kr 
+ * 
+ */
+
+/*
+ * @(#)SupportDAO.java 1.10 2010. 04. 20
+ */
+
+package com.foresys.fsys.taskReq.dao;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.servlet.http.HttpServletRequest;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
+import com.foresys.fsys.system.model.AmmemberInfo;
+import com.foresys.lib.common.CommonSqlMapClientDaoSupport;
+import com.foresys.lib.paging.GridPagedList;
+
+/** 
+ * TaskReqDAO.java
+ * 
+ * @version @(#)TaskReqDAO.java 1.10 2017.03.07
+ * @author
+ * @modified 
+ */ 
+  
+public class TaskReqDAO extends CommonSqlMapClientDaoSupport {
+
+    private static final Log log = LogFactory.getLog( TaskReqDAO.class );    
+
+   /**
+    * [요구사항 리스트 코드조회]
+    * 
+    * @param model
+    * @return
+    * @throws Exception
+    */
+    public Map<String, Object> taskReqList( Map<String, Object> model ) throws Exception {
+        return getQueryList( model );
+        //private Map<String, Object> getQueryList( Map<String, Object> model ) =>
+    
+    }
+    
+    /**
+     * [요구사항 리스트 목록조회]
+     * 
+     * @param param
+     * @return
+     */
+    public GridPagedList<Map<String, Object>> getTaskReqList(Map<String, Object> param) {
+    	//등록일 start
+    	//등록일 end
+    	//검색 조건
+    	String seach_dt_from = (String)param.get( "seach_dt_from" );
+		String seach_dt_to = (String)param.get( "seach_dt_to" );
+		String seach_text = param.get( "seach_text" )==null?"":(String)param.get( "seach_text" );
+		
+		if(seach_dt_from == null && seach_dt_to == null) { //등록일이 없으면
+			 param.put( "seach_dt_from", param.get( "seach_dt_from" )==null?dateUtil.getYearMonthDay( -7, "" ):(String)param.get( "seach_dt_from" ) );
+		     param.put( "seach_dt_to",   param.get( "seach_dt_to" )==null?dateUtil.getYearMonthDay():(String)param.get( "seach_dt_to" ) );
+		}
+		
+		//log.info("getTaskReqList param{}"+param);
+		
+		if(!"".equals(seach_text) && seach_text.length() > 0) {
+			param.put("seach_dt_from", null);
+			param.put("seach_dt_to", null);
+		}
+		
+		return new GridPagedList<Map<String, Object>>(getSqlMapClientTemplate(), "taskreq.taskReqList", param);
+	}
+    
+    /**
+     * [요구사항 등록/수정/상세화면] 
+     * 
+     * @param req
+     * @param param
+     * @return
+     * @throws Exception
+     */
+    public Map<String, Object> taskReqView( HttpServletRequest req, Map<String, Object> param ) throws Exception {
+        Map<String, Object> model = new HashMap<String, Object>();
+        
+        //세션  얻기
+		AmmemberInfo ammemberinfo =(AmmemberInfo) req.getSession().getAttribute("ss_user");
+		String member_no = ammemberinfo.getMember_no();
+    	param.put("member_no",member_no);
+    	
+    	
+    	// 오늘시간을  10분후로 셋팅
+		String time = dateUtil.getHourMinute(); // 2310 <- 23시 10분
+		
+		String hour = time.substring(0, 2);
+		int minute_puls_1 = Integer.parseInt(time.substring(2,3)) +1; //+ 10분후 셋팅
+		String minute1 = Integer.toString(minute_puls_1);
+		
+		if(minute1.equals("6")){		// 60분이면 0분으로
+			int hour_puls_1 = Integer.parseInt(hour)+1; //+ 1시간후 셋팅
+			hour = Integer.toString(hour_puls_1);
+			minute1 = "0";
+			if(hour.equals("24")){
+				hour = "00";
+			}
+		}
+		
+		String minute = minute1+"0";
+		
+		model.put("DATE", dateUtil.getYearMonthDay());
+		model.put("HOUR", hour);
+		model.put("MINUTE", minute);
+    	
+    	
+        model.put("detail", (Map<String, Object>)getSqlMapClientTemplate().queryForObject("taskreq.taskReqView", param) );
+        model.put("FileView", getSqlMapClientTemplate().queryForList("taskreq.FileView", param));
+        model.put("Z_15", getSqlMapClientTemplate().queryForList("zccode.ComboBox2", "Z15"));
+        model.put("Z_14", getSqlMapClientTemplate().queryForList("zccode.ComboBox2", "Z14"));
+        model = getQueryList( model );
+       
+        return model; 
+    }
+    
+
+
+    /**
+     * [SelectBox용 쿼리]
+     * 
+     * @param model  
+     * @return
+     */
+    private Map<String, Object> getQueryList( Map<String, Object> model ) {
+    	model.put( "Z_924", getSqlMapClientTemplate().queryForList( "zccode.ComboBox2", "924" ) );	// 처리진행상황
+        //model.put( "Z_925", getSqlMapClientTemplate().queryForList( "zccode.ComboBox2", "925" ) );	// 결재진행상황
+        model.put( "Z_926", getSqlMapClientTemplate().queryForList( "zccode.ComboBox2", "926" ) );	// 시스템
+        model.put( "Z_927", getSqlMapClientTemplate().queryForList( "zccode.ComboBox2", "927" ) );	// 접수방법
+        model.put( "Z_929", getSqlMapClientTemplate().queryForList( "zccode.ComboBox2", "929" ) );	// 업무(처리)구분
+        model.put( "Z_930", getSqlMapClientTemplate().queryForList( "zccode.ComboBox2", "930" ) );	// 요청구분
+        
+        model.put("Z_DD", getSqlMapClientTemplate().queryForList("zccode.ComboBox2", "923"));		// 일수
+        model.put("Z_HOUR", getSqlMapClientTemplate().queryForList("zccode.ComboBox2", "921"));		// 시간	
+		model.put("Z_MIN", getSqlMapClientTemplate().queryForList("zccode.ComboBox2", "922"));		// 분
+		
+        return model;
+    }
+    
+    public Map<String, Object> taskReqCheckerForm( HttpServletRequest req, Map<String, Object> param ) throws Exception {
+        Map<String, Object> model = new HashMap<String, Object>();
+        
+        //세션  얻기
+		AmmemberInfo ammemberinfo =(AmmemberInfo) req.getSession().getAttribute("ss_user");
+		String dept_cd = ammemberinfo.getDept_cd();
+		
+    	param.put("dept_cd",dept_cd);
+        model.put("CheckerLIst", getSqlMapClientTemplate().queryForList("ammember.taskReqCheckerLIst", param) );
+    
+        return model; 
+    }
+    
+    public String taskReqCheckerSave( HttpServletRequest req, Map<String, Object> param) throws Exception {
+	 	Map<String, Object> model = new HashMap<String, Object>();
+        String result = "";
+        
+        AmmemberInfo ammemberInfo = (AmmemberInfo) req.getSession().getAttribute("ss_user");
+        
+		String CheckMain=(String) param.get("CheckerFormMain");
+		String CheckSub=(String) param.get("CheckerFormMain");
+		
+		param.put("CheckMain",CheckMain);
+		param.put("CheckSub",CheckSub);
+		getSqlMapClientTemplate().update("ammember.taskReqCheckerSave", param);
+		
+        return result;
+    }
+    /**
+     * [요구사항 정보 처리(추가,수정)]
+     * 
+     * @param req
+     * @param param
+     * @return
+     * @throws Exception
+     */
+    public String taskReqProc( HttpServletRequest req, Map<String, Object> param) throws Exception {
+        
+        String result = "";
+        
+        AmmemberInfo ammemberInfo = (AmmemberInfo) req.getSession().getAttribute("ss_user");
+		param.put("member_no", ammemberInfo == null ? "" : ammemberInfo.getMember_no());
+        
+        // get seq
+ 		if (param.get("task_seq") == null || "".equals(param.get("task_seq"))) {
+ 			param.put("task_seq", this.getTaskSeq());
+ 			param.put( "hst_div_cd", "001" );	// 001 : 최초등록된 요구사항
+ 			param.put( "action_div", "insert" );
+ 		}else{
+ 			param.put( "hst_div_cd", "003" );	// 003 : 수정된 요구사항
+ 			param.put( "action_div", "update" );
+ 		}
+        
+ 		Map<String, Object> memberMap = new HashMap<String, Object>();
+ 		HashMap<String, Object> param2;
+  		String file_seq[] = req.getParameterValues("file_seq");
+  		
+  		
+  		int file_seq_cnt = 0;
+  		
+		param.put("seq", param.get("task_seq"));
+  		
+		if(file_seq != null && "insert".equals(param.get("action_div"))){
+  			file_seq_cnt = file_seq.length;
+  				
+  			for(int i=0; i < file_seq_cnt; i++){
+  				param2 = new HashMap<String, Object>();
+  				param2.put("seq", param.get("seq"));
+  				param2.put("file_seq", file_seq[i]);
+  					
+  				getSqlMapClientTemplate().insert("taskreq.insertFile", param2);
+  			}
+  		}
+		
+  		try {
+  			
+  			getSqlMapClientTemplate().update("taskreq.taskReqSave", param);
+    		getSqlMapClientTemplate().insert("taskreq.taskReqHstInsert", param);
+    		
+    		
+    		//처리상태가 접수(001)/개발완료(012)/완료(009) 인 경우, 현업요청자에게 sms발송
+    		String seq = (String) param.get("task_seq");
+    		String proc_state_cd = param.get("proc_state_cd")==null?"":(String)param.get("proc_state_cd");		//처리진행상태
+    		String sms_receive_yn = param.get("sms_receive_yn")==null?"":(String)param.get("sms_receive_yn");	//SMS수신여부(Y/N)
+    		String req_user_no = param.get("req_user_no")==null?"":(String)param.get("req_user_no");			//요청자ID
+    		String mobile_no = "";
+    		String sms_msg = "";
+    		
+    		log.info("### taskReqProc seq["+seq+"] proc_state_cd["+proc_state_cd+"] sms_receive_yn["+sms_receive_yn+"] req_user_no["+req_user_no+"]");
+    		
+    		
+    		if(!"99901".equals(req_user_no) && !"99910".equals(req_user_no) && !"99911".equals(req_user_no)) {
+    			if("001".equals(proc_state_cd) || "009".equals(proc_state_cd) || "012".equals(proc_state_cd)
+    					|| "004".equals(proc_state_cd)|| "003".equals(proc_state_cd)) {
+    				
+    				if("001".equals(proc_state_cd)) sms_msg = "지원요청 ["+seq+"] 항목이 접수 되었습니다.";
+    				else if("009".equals(proc_state_cd)) sms_msg = "지원요청 ["+seq+"] 항목이 완료 되었습니다.";
+    				else if("012".equals(proc_state_cd)) sms_msg = "지원요청 ["+seq+"] 항목이 개발완료 되었습니다.";
+    				else if("004".equals(proc_state_cd)) sms_msg = "지원요청 ["+seq+"] 항목이 제외 되었습니다.";
+    				else if("003".equals(proc_state_cd)) sms_msg = "지원요청 ["+seq+"] 항목이 보류 되었습니다.";
+    				
+    				param.put("member_no", req_user_no);
+    	    		memberMap = (Map<String, Object>) getSqlMapClientTemplate().queryForObject("ammember.Detail", param);
+    	    		mobile_no = memberMap.get("MOBILE_NO")==null?"":memberMap.get("MOBILE_NO").toString();
+    	    		param.put("req_user_mobile_no", mobile_no);
+    				param.put("sms_msg", sms_msg);
+    				commonSmsSend(param);
+    			}
+    		}
+    		
+            result = "00";
+            
+            log.info( "taskReqProc param : " + param );
+        } 
+        catch(Exception e) {
+            e.printStackTrace();
+            throw e;
+        }
+        finally {
+            log.info( "taskReqProc result : " + result );
+        }
+        
+        return result;
+    }
+    
+    /**
+     * [요구사항 삭제처리]
+     * 
+     * @param req
+     * @param param
+     * @return
+     * @throws Exception
+     */
+    public String taskReqDelete( HttpServletRequest req, Map<String, Object> param) throws Exception {
+        
+        String result = "";
+        
+        AmmemberInfo ammemberInfo = (AmmemberInfo) req.getSession().getAttribute("ss_user");
+		param.put("member_no", ammemberInfo == null ? "" : ammemberInfo.getMember_no());
+        
+ 		// 004 : 삭제된 요구사항
+ 		param.put( "hst_div_cd", "004" );
+ 		param.put( "view_yn", "X");
+		
+  		try {
+    		
+            getSqlMapClientTemplate().update("taskreq.updateDelYn", param);	// DEL_YN = 'Y'
+            getSqlMapClientTemplate().update("taskreq.zfileDelete", param);	// VIEW_YN = 'X'
+    		getSqlMapClientTemplate().insert("taskreq.taskReqHstInsert", param);
+    		
+            result = "00";
+            
+            log.info( "taskReqDelete param : " + param );
+        } 
+        catch(Exception e) {
+            e.printStackTrace();
+            throw e;
+        }
+        finally {
+            log.info( "taskReqDelete result : " + result );
+        }
+        
+        return result;
+    }
+    
+    /**
+     * [요구사항 요청처리, 테스트완료처리]
+     * 
+     * @param req
+     * @param param
+     * @return
+     * @throws Exception
+     */
+    public String taskReqSet( HttpServletRequest req, Map<String, Object> param) throws Exception {
+        
+        String result = "";
+        String proc_gubun = (String) param.get("proc_gubun");
+        
+        AmmemberInfo ammemberInfo = (AmmemberInfo) req.getSession().getAttribute("ss_user");
+		param.put("member_no", ammemberInfo == null ? "" : ammemberInfo.getMember_no());
+        
+ 		// 003 : 수정된 요구사항
+		param.put( "hst_div_cd", "003" );
+		
+		
+  		try {
+    		
+  			if("1".equals(proc_gubun)) {
+  				//요청 처리
+  				//param.put("proc_state_cd", "000");
+  				getSqlMapClientTemplate().update("taskreq.updateTaskReq", param);
+  			} else if("2".equals(proc_gubun)) {
+  				//테스트완료처리
+  				param.put("proc_state_cd", "013");
+  				getSqlMapClientTemplate().update("taskreq.updateTaskReqTest", param);
+  			}
+            
+    		getSqlMapClientTemplate().insert("taskreq.taskReqHstInsert", param);
+    		
+    		
+    		
+    		
+    		//처리상태가 테스트완료(013) 인 경우, 이홍재과장에게 sms발송
+    		String seq = (String) param.get("task_seq");
+    		String proc_state_cd = param.get("proc_state_cd")==null?"":(String)param.get("proc_state_cd");		//처리진행상태
+    		String req_user_no = param.get("req_user_no")==null?"":(String)param.get("req_user_no");			//요청자ID
+    		String mobile_no = "01028244327";	//이홍재과장 번호
+    		String sms_msg = "";
+    		
+    		if((!"99901".equals(req_user_no) && !"99910".equals(req_user_no) && !"99911".equals(req_user_no)) && "013".equals(proc_state_cd)) {
+				
+				if("013".equals(proc_state_cd)) sms_msg = "지원요청 ["+seq+"] 항목이 테스트완료 되었습니다.";
+				
+				param.put("member_no", req_user_no);
+	    		param.put("req_user_mobile_no", mobile_no);
+				param.put("sms_msg", sms_msg);
+				commonSmsSend(param);
+			}
+    		
+    		
+    		
+            result = "00";
+            
+            //log.info( "taskReqSet param : " + param );
+        } 
+        catch(Exception e) {
+            e.printStackTrace();
+            throw e;
+        }
+        finally {
+            log.info( "taskReqSet result : " + result );
+        }
+        
+        return result;
+    }
+    
+    public String taskReqListChgState( HttpServletRequest req, Map<String, Object> param) throws Exception {
+        
+        String result = "";
+        String mobile_no ="";
+        String seq  = param.get("task_seq").toString();
+        String msg = param.get("msg").toString();
+        String sms_msg ="지원요청 ["+seq+"] 항목이 "+msg+" 되었습니다.";
+        
+        String bef_proc_state_cd = param.get("bef_proc_state_cd").toString();
+        String proc_state_cd = param.get("proc_state_cd").toString();
+        
+        // 접수에서 다이렉트로 운영배포완료 시 접수일시를 반영완료일시 -10분으로 자동셋팅시킴.
+        /*if("009".equals(proc_state_cd)
+        		&& ("000".equals(bef_proc_state_cd) || "010".equals(bef_proc_state_cd) || "014".equals(bef_proc_state_cd))){
+        	param.put("direct009_Insert", "Y");
+        }else if("001".equals(proc_state_cd)){
+        	param.put("direct009_Insert", "N");
+        }else{
+        	param.put("direct009_Insert", "");
+        }*/
+        
+  		try {
+    		
+  			Map<String, Object> memberMap = new HashMap<String, Object>();
+  			memberMap = (Map<String, Object>) getSqlMapClientTemplate().queryForObject("ammember.Detail", param);
+    		mobile_no = memberMap.get("MOBILE_NO")==null?"":memberMap.get("MOBILE_NO").toString();
+    		param.put("req_user_mobile_no", mobile_no);
+			param.put("sms_msg", sms_msg);
+			commonSmsSend(param);
+			getSqlMapClientTemplate().update("taskreq.UpdateState", param);
+			
+    		
+        } 
+        catch(Exception e) {
+            e.printStackTrace();
+            throw e;
+        }
+        finally {
+            log.info( "taskReqListChgState result : " + result );
+        }
+        
+        return result;
+    }
+    
+
+    public String getTaskSeq() {
+		return (String) getSqlMapClientTemplate().queryForObject("taskreq.getTaskSeq");
+	}
+      
+    /**
+     * [이력 목록 팝업]
+     * 
+     * @param req
+     * @param param
+     * @return
+     * @throws Exception
+     */
+    public Map<String, Object> taskReqHstListPopup( HttpServletRequest req, Map<String, Object> param ) throws Exception {
+        Map<String, Object> model = new HashMap<String, Object>();
+        //model.put( "list", getSqlMapClientTemplate().queryForList( "taskreq.taskReqHstList", param ) );
+        //model.put( "totCount", (String)getSqlMapClientTemplate().queryForObject( "taskreq.taskReqHstListCount", param ) );
+        
+        return model;
+    }
+    
+    /**
+     * [요구사항 리스트 목록조회]
+     * 
+     * @param param
+     * @return
+     */
+    public GridPagedList<Map<String, Object>> getTaskReqHstList(Map<String, Object> param) {
+		return new GridPagedList<Map<String, Object>>(getSqlMapClientTemplate(), "taskreq.taskReqHstList", param);
+	}
+    
+    /**
+     * [이력 상세 팝업]
+     * 
+     * @param req
+     * @param param
+     * @return
+     * @throws Exception
+     */
+    public Map<String, Object> taskReqHstPopup( HttpServletRequest req, Map<String, Object> param ) throws Exception {
+        Map<String, Object> model = new HashMap<String, Object>();
+        model.put( "detailHst", getSqlMapClientTemplate().queryForObject( "taskreq.taskReqHstView", param ) );
+        
+        return model;
+    }
+    
+    /**
+     * [요구사항 리스트 엑셀]
+     * 
+     * @param req
+     * @param param
+     * @return
+     * @throws Exception
+     */
+    public Map<String, Object> taskReqListExcel( HttpServletRequest req, Map<String, Object> param ) throws Exception {
+    	
+    	String seach_dt_from = (String)param.get( "seach_dt_from" );
+		String seach_dt_to = (String)param.get( "seach_dt_to" );
+		
+		if(seach_dt_from == null && seach_dt_to == null) {
+			 param.put( "seach_dt_from", param.get( "seach_dt_from" )==null?dateUtil.getYearMonthDay( -7, "" ):(String)param.get( "seach_dt_from" ) );
+		     param.put( "seach_dt_to",   param.get( "seach_dt_to" )==null?dateUtil.getYearMonthDay():(String)param.get( "seach_dt_to" ) );
+		}
+
+        Map<String, Object> model = new HashMap<String, Object>();
+        model.put( "list", getSqlMapClientTemplate().queryForList( "taskreq.taskReqListExcel", param ) );
+        
+        return model;
+    }
+    
+    /**
+     * [개발완료예정일자 구하기]
+     * 
+     * @param req
+     * @param param
+     * @return
+     * @throws Exception
+     */
+    public String getBizDate( HttpServletRequest req, Map<String, Object> param ) throws Exception {
+        return (String) getSqlMapClientTemplate().queryForObject( "taskreq.getBizDate", param );
+    }
+    
+    
+    /**
+	 * [문자 바이트 수 구하기]
+	 * @param msg
+	 * @return
+	 */
+	public int bytes(String msg)
+	{
+		int len = msg.getBytes().length;
+		return len;
+	}
+	
+	/**
+	 * [char[] -> String[]]
+	 * @param msg
+	 * @return
+	 */
+	public String[] arrayChar(String msg)
+	{
+		char cc[] = msg.toCharArray();
+		String ss[] = new String[cc.length];
+		for(int i=0; i < cc.length ; i++){
+			ss[i] = cc[i]+"";
+		}
+		
+		return ss;
+	}
+	
+	public String commonSmsSend(Map<String,Object> param) throws Exception
+	{
+		String result = "T";
+		
+		try{
+			
+			String send_msg = (param.get("sms_msg").toString());
+			
+			// 받는 사람 번호 체크
+			String sms_call_no1 = "";
+			String sms_call_no2 = "";
+			String sms_call_no3 = "";
+			
+			String user_mobile_no_substr = "";
+			// 고객지원 요청한 요청자연락처
+            String userMobile_no = (String) param.get("req_user_mobile_no");
+            String user_mobile_no = userMobile_no.replace("-", "");
+			user_mobile_no_substr = user_mobile_no.substring(0, 3);
+			if("010".equals(user_mobile_no_substr)){
+    			log.info( "***************** user_mobile_no 전화번호 앞자리가 010이라면 ******" + userMobile_no);
+
+				sms_call_no1 = user_mobile_no.substring(0, 3);
+				sms_call_no2 = user_mobile_no.substring(3, 7);
+				sms_call_no3 = user_mobile_no.substring(7);
+				
+				param.put("sms_call_no1", sms_call_no1);
+				param.put("sms_call_no2", sms_call_no2);
+				param.put("sms_call_no3", sms_call_no3);
+				param.put("sms_reserve_time", "00000000000000");
+				param.put("sms_div", "1");
+				param.put("sms_hist_insert", "N");
+				param.put("sms_call_name", "ADMIN_SUPPORT");
+				param.put("sms_message", send_msg);
+				param.put("sms_req_no1", "1599");
+				param.put("sms_req_no2", "0038");
+				param.put("sms_req_no3", "");
+				param.put("send_member", "99901");
+				param.put("sms_req_name"  , "우리금융저축은행");
+				param.put("sms_agt_id"    , "99901");
+				
+				getSqlMapClientTemplate().insert("smsdata.InsertCUSTSMS", param);
+			
+			}
+			System.out.println("# commonSmsSend ok");
+		} catch(Exception e){
+			log.info("# commonSmsSend Error : "+e);
+			System.out.println("# commonSmsSend Error : "+e);
+			result = "F"; 
+		}
+		
+		return result;
+	}
+    	
+}
+
+
+
+
+###############dao
