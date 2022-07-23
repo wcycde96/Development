@@ -1,0 +1,15 @@
+		String M="M|202220";
+		String S="S|202221";
+		int idxM = M.indexOf("|");
+		int idxS = M.indexOf("|");
+		
+		String Main1=M.substring(0,idxM);
+		String Main2=M.substring(idxM+1);
+		
+		String Sub1=S.substring(0,idxS);
+		String Sub2=S.substring(idxS+1);
+		
+		System.out.println(Main1);
+		System.out.println(Main2);
+		System.out.println(Sub1);
+		System.out.println(Sub2);
