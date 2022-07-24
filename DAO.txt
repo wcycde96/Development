@@ -1,0 +1,612 @@
+package com.foresys.fsys.taskReq.dao;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.servlet.http.HttpServletRequest;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
+import com.foresys.fsys.system.model.AmmemberInfo;
+import com.foresys.lib.common.CommonSqlMapClientDaoSupport;
+import com.foresys.lib.paging.GridPagedList;
+
+/** 
+ * TaskReqDAO.java
+ * 
+ * @version @(#)TaskReqDAO.java 1.10 2017.03.07
+ * @author
+ * @modified 
+ */ 
+  
+public class TaskReqDAO extends CommonSqlMapClientDaoSupport {
+
+    private static final Log log = LogFactory.getLog( TaskReqDAO.class );    
+
+   /**
+    * [요구사항 리스트 코드조회]
+    * 
+    * @param model
+    * @return
+    * @throws Exception
+    */
+    public Map<String, Object> taskReqList( Map<String, Object> model ) throws Exception {
+        return getQueryList( model );
+        //private Map<String, Object> getQueryList( Map<String, Object> model ) =>
+    
+    }
+    
+    /**
+     * [요구사항 리스트 목록조회]
+     * 
+     * @param param
+     * @return
+     */
+    public GridPagedList<Map<String, Object>> getTaskReqList(Map<String, Object> param) {
+    	//등록일 start
+    	//등록일 end
+    	//검색 조건
+    	String seach_dt_from = (String)param.get( "seach_dt_from" );
+		String seach_dt_to = (String)param.get( "seach_dt_to" );
+		String seach_text = param.get( "seach_text" )==null?"":(String)param.get( "seach_text" );
+		
+		if(seach_dt_from == null && seach_dt_to == null) { //등록일이 없으면
+			 param.put( "seach_dt_from", param.get( "seach_dt_from" )==null?dateUtil.getYearMonthDay( -7, "" ):(String)param.get( "seach_dt_from" ) );
+		     param.put( "seach_dt_to",   param.get( "seach_dt_to" )==null?dateUtil.getYearMonthDay():(String)param.get( "seach_dt_to" ) );
+		}
+		
+		//log.info("getTaskReqList param{}"+param);
+		
+		if(!"".equals(seach_text) && seach_text.length() > 0) {
+			param.put("seach_dt_from", null);
+			param.put("seach_dt_to", null);
+		}
+		
+		return new GridPagedList<Map<String, Object>>(getSqlMapClientTemplate(), "taskreq.taskReqList", param);
+	}
+    
+    /**
+     * [요구사항 등록/수정/상세화면] 
+     * 
+     * @param req
+     * @param param
+     * @return
+     * @throws Exception
+     */
+    public Map<String, Object> taskReqView( HttpServletRequest req, Map<String, Object> param ) throws Exception {
+        Map<String, Object> model = new HashMap<String, Object>();
+        
+        //세션  얻기
+		AmmemberInfo ammemberinfo =(AmmemberInfo) req.getSession().getAttribute("ss_user");
+		String member_no = ammemberinfo.getMember_no();
+    	param.put("member_no",member_no);
+    	
+    	
+    	// 오늘시간을  10분후로 셋팅
+		String time = dateUtil.getHourMinute(); // 2310 <- 23시 10분
+		
+		String hour = time.substring(0, 2);
+		int minute_puls_1 = Integer.parseInt(time.substring(2,3)) +1; //+ 10분후 셋팅
+		String minute1 = Integer.toString(minute_puls_1);
+		
+		if(minute1.equals("6")){		// 60분이면 0분으로
+			int hour_puls_1 = Integer.parseInt(hour)+1; //+ 1시간후 셋팅
+			hour = Integer.toString(hour_puls_1);
+			minute1 = "0";
+			if(hour.equals("24")){
+				hour = "00";
+			}
+		}
+		
+		String minute = minute1+"0";
+		
+		model.put("DATE", dateUtil.getYearMonthDay());
+		model.put("HOUR", hour);
+		model.put("MINUTE", minute);
+    	
+    	
+        model.put("detail", (Map<String, Object>)getSqlMapClientTemplate().queryForObject("taskreq.taskReqView", param) );
+        model.put("FileView", getSqlMapClientTemplate().queryForList("taskreq.FileView", param));
+        model.put("Z_15", getSqlMapClientTemplate().queryForList("zccode.ComboBox2", "Z15"));
+        model.put("Z_14", getSqlMapClientTemplate().queryForList("zccode.ComboBox2", "Z14"));
+        model = getQueryList( model );
+       
+        return model; 
+    }
+    
+
+
+    /**
+     * [SelectBox용 쿼리]
+     * 
+     * @param model  
+     * @return
+     */
+    private Map<String, Object> getQueryList( Map<String, Object> model ) {
+    	model.put( "Z_924", getSqlMapClientTemplate().queryForList( "zccode.ComboBox2", "924" ) );	// 처리진행상황
+        //model.put( "Z_925", getSqlMapClientTemplate().queryForList( "zccode.ComboBox2", "925" ) );	// 결재진행상황
+        model.put( "Z_926", getSqlMapClientTemplate().queryForList( "zccode.ComboBox2", "926" ) );	// 시스템
+        model.put( "Z_927", getSqlMapClientTemplate().queryForList( "zccode.ComboBox2", "927" ) );	// 접수방법
+        model.put( "Z_929", getSqlMapClientTemplate().queryForList( "zccode.ComboBox2", "929" ) );	// 업무(처리)구분
+        model.put( "Z_930", getSqlMapClientTemplate().queryForList( "zccode.ComboBox2", "930" ) );	// 요청구분
+        
+        model.put("Z_DD", getSqlMapClientTemplate().queryForList("zccode.ComboBox2", "923"));		// 일수
+        model.put("Z_HOUR", getSqlMapClientTemplate().queryForList("zccode.ComboBox2", "921"));		// 시간	
+		model.put("Z_MIN", getSqlMapClientTemplate().queryForList("zccode.ComboBox2", "922"));		// 분
+		
+        return model;
+    }
+    
+    public Map<String, Object> taskReqCheckerForm( HttpServletRequest req, Map<String, Object> param ) throws Exception {
+        Map<String, Object> model = new HashMap<String, Object>();
+        
+        //세션  얻기
+		AmmemberInfo ammemberinfo =(AmmemberInfo) req.getSession().getAttribute("ss_user");
+		String dept_cd = ammemberinfo.getDept_cd();
+		
+    	param.put("dept_cd",dept_cd);
+        model.put("CheckerLIst", getSqlMapClientTemplate().queryForList("ammember.taskReqCheckerLIst", param) );
+    
+        return model; 
+    }
+    
+    public String taskReqCheckerSave( HttpServletRequest req, Map<String, Object> param) throws Exception {
+	 	Map<String, Object> model = new HashMap<String, Object>();
+        String result = "";
+        
+        AmmemberInfo ammemberInfo = (AmmemberInfo) req.getSession().getAttribute("ss_user");
+        
+		String CheckMain=(String) param.get("CheckerFormMain");
+		String CheckSub=(String) param.get("CheckerFormMain");
+		
+		
+		int Mainindex = CheckMain.indexOf("|");
+		int Subindex = CheckSub.indexOf("|");
+		
+		String Main1=CheckMain.substring(0,Mainindex);
+		String Main2=CheckMain.substring(Mainindex+1);
+		
+		String Sub1=CheckSub.substring(0,Subindex);
+		String Sub2=CheckSub.substring(Subindex+1);
+		
+		//1=> Checker => M OR S
+		//2=> 사번
+		//sql에 update table setwhere 사번 =#사번# 
+//		<update id="" parameterClass="hmap">
+//        UPDATE 
+//            TB_FS_AMMEMBER
+//        SET 
+//            CHECKER =          
+//        WHERE 
+//            MEMBER_NO = #member_no#
+//    </update>
+		
+//        WHERE CODEGRP = 'VW5' AND USE_YN = 'Y' AND CODE_VAL2 = 'XS2')
+		//조건을 값이 M이면 no S면 
+		param.put("CheckMain",CheckMain);
+		param.put("CheckSub",CheckSub);
+		
+		
+		getSqlMapClientTemplate().update("ammember.taskReqCheckerSave", param);
+		
+        return result;
+    }
+    /**
+     * [요구사항 정보 처리(추가,수정)]
+     * 
+     * @param req
+     * @param param
+     * @return
+     * @throws Exception
+     */
+    public String taskReqProc( HttpServletRequest req, Map<String, Object> param) throws Exception {
+        
+        String result = "";
+        
+        AmmemberInfo ammemberInfo = (AmmemberInfo) req.getSession().getAttribute("ss_user");
+		param.put("member_no", ammemberInfo == null ? "" : ammemberInfo.getMember_no());
+        
+        // get seq
+ 		if (param.get("task_seq") == null || "".equals(param.get("task_seq"))) {
+ 			param.put("task_seq", this.getTaskSeq());
+ 			param.put( "hst_div_cd", "001" );	// 001 : 최초등록된 요구사항
+ 			param.put( "action_div", "insert" );
+ 		}else{
+ 			param.put( "hst_div_cd", "003" );	// 003 : 수정된 요구사항
+ 			param.put( "action_div", "update" );
+ 		}
+        
+ 		Map<String, Object> memberMap = new HashMap<String, Object>();
+ 		HashMap<String, Object> param2;
+  		String file_seq[] = req.getParameterValues("file_seq");
+  		
+  		
+  		int file_seq_cnt = 0;
+  		
+		param.put("seq", param.get("task_seq"));
+  		
+		if(file_seq != null && "insert".equals(param.get("action_div"))){
+  			file_seq_cnt = file_seq.length;
+  				
+  			for(int i=0; i < file_seq_cnt; i++){
+  				param2 = new HashMap<String, Object>();
+  				param2.put("seq", param.get("seq"));
+  				param2.put("file_seq", file_seq[i]);
+  					
+  				getSqlMapClientTemplate().insert("taskreq.insertFile", param2);
+  			}
+  		}
+		
+  		try {
+  			
+  			getSqlMapClientTemplate().update("taskreq.taskReqSave", param);
+    		getSqlMapClientTemplate().insert("taskreq.taskReqHstInsert", param);
+    		
+    		
+    		//처리상태가 접수(001)/개발완료(012)/완료(009) 인 경우, 현업요청자에게 sms발송
+    		String seq = (String) param.get("task_seq");
+    		String proc_state_cd = param.get("proc_state_cd")==null?"":(String)param.get("proc_state_cd");		//처리진행상태
+    		String sms_receive_yn = param.get("sms_receive_yn")==null?"":(String)param.get("sms_receive_yn");	//SMS수신여부(Y/N)
+    		String req_user_no = param.get("req_user_no")==null?"":(String)param.get("req_user_no");			//요청자ID
+    		String mobile_no = "";
+    		String sms_msg = "";
+    		
+    		log.info("### taskReqProc seq["+seq+"] proc_state_cd["+proc_state_cd+"] sms_receive_yn["+sms_receive_yn+"] req_user_no["+req_user_no+"]");
+    		
+    		
+    		if(!"99901".equals(req_user_no) && !"99910".equals(req_user_no) && !"99911".equals(req_user_no)) {
+    			if("001".equals(proc_state_cd) || "009".equals(proc_state_cd) || "012".equals(proc_state_cd)
+    					|| "004".equals(proc_state_cd)|| "003".equals(proc_state_cd)) {
+    				
+    				if("001".equals(proc_state_cd)) sms_msg = "지원요청 ["+seq+"] 항목이 접수 되었습니다.";
+    				else if("009".equals(proc_state_cd)) sms_msg = "지원요청 ["+seq+"] 항목이 완료 되었습니다.";
+    				else if("012".equals(proc_state_cd)) sms_msg = "지원요청 ["+seq+"] 항목이 개발완료 되었습니다.";
+    				else if("004".equals(proc_state_cd)) sms_msg = "지원요청 ["+seq+"] 항목이 제외 되었습니다.";
+    				else if("003".equals(proc_state_cd)) sms_msg = "지원요청 ["+seq+"] 항목이 보류 되었습니다.";
+    				
+    				param.put("member_no", req_user_no);
+    	    		memberMap = (Map<String, Object>) getSqlMapClientTemplate().queryForObject("ammember.Detail", param);
+    	    		mobile_no = memberMap.get("MOBILE_NO")==null?"":memberMap.get("MOBILE_NO").toString();
+    	    		param.put("req_user_mobile_no", mobile_no);
+    				param.put("sms_msg", sms_msg);
+    				commonSmsSend(param);
+    			}
+    		}
+    		
+            result = "00";
+            
+            log.info( "taskReqProc param : " + param );
+        } 
+        catch(Exception e) {
+            e.printStackTrace();
+            throw e;
+        }
+        finally {
+            log.info( "taskReqProc result : " + result );
+        }
+        
+        return result;
+    }
+    
+    /**
+     * [요구사항 삭제처리]
+     * 
+     * @param req
+     * @param param
+     * @return
+     * @throws Exception
+     */
+    public String taskReqDelete( HttpServletRequest req, Map<String, Object> param) throws Exception {
+        
+        String result = "";
+        
+        AmmemberInfo ammemberInfo = (AmmemberInfo) req.getSession().getAttribute("ss_user");
+		param.put("member_no", ammemberInfo == null ? "" : ammemberInfo.getMember_no());
+        
+ 		// 004 : 삭제된 요구사항
+ 		param.put( "hst_div_cd", "004" );
+ 		param.put( "view_yn", "X");
+		
+  		try {
+    		
+            getSqlMapClientTemplate().update("taskreq.updateDelYn", param);	// DEL_YN = 'Y'
+            getSqlMapClientTemplate().update("taskreq.zfileDelete", param);	// VIEW_YN = 'X'
+    		getSqlMapClientTemplate().insert("taskreq.taskReqHstInsert", param);
+    		
+            result = "00";
+            
+            log.info( "taskReqDelete param : " + param );
+        } 
+        catch(Exception e) {
+            e.printStackTrace();
+            throw e;
+        }
+        finally {
+            log.info( "taskReqDelete result : " + result );
+        }
+        
+        return result;
+    }
+    
+    /**
+     * [요구사항 요청처리, 테스트완료처리]
+     * 
+     * @param req
+     * @param param
+     * @return
+     * @throws Exception
+     */
+    public String taskReqSet( HttpServletRequest req, Map<String, Object> param) throws Exception {
+        
+        String result = "";
+        String proc_gubun = (String) param.get("proc_gubun");
+        
+        AmmemberInfo ammemberInfo = (AmmemberInfo) req.getSession().getAttribute("ss_user");
+		param.put("member_no", ammemberInfo == null ? "" : ammemberInfo.getMember_no());
+        
+ 		// 003 : 수정된 요구사항
+		param.put( "hst_div_cd", "003" );
+		
+		
+  		try {
+    		
+  			if("1".equals(proc_gubun)) {
+  				//요청 처리
+  				//param.put("proc_state_cd", "000");
+  				getSqlMapClientTemplate().update("taskreq.updateTaskReq", param);
+  			} else if("2".equals(proc_gubun)) {
+  				//테스트완료처리
+  				param.put("proc_state_cd", "013");
+  				getSqlMapClientTemplate().update("taskreq.updateTaskReqTest", param);
+  			}
+            
+    		getSqlMapClientTemplate().insert("taskreq.taskReqHstInsert", param);
+    		
+    		
+    		
+    		
+    		//처리상태가 테스트완료(013) 인 경우, 이홍재과장에게 sms발송
+    		String seq = (String) param.get("task_seq");
+    		String proc_state_cd = param.get("proc_state_cd")==null?"":(String)param.get("proc_state_cd");		//처리진행상태
+    		String req_user_no = param.get("req_user_no")==null?"":(String)param.get("req_user_no");			//요청자ID
+    		String mobile_no = "01028244327";	//이홍재과장 번호
+    		String sms_msg = "";
+    		
+    		if((!"99901".equals(req_user_no) && !"99910".equals(req_user_no) && !"99911".equals(req_user_no)) && "013".equals(proc_state_cd)) {
+				
+				if("013".equals(proc_state_cd)) sms_msg = "지원요청 ["+seq+"] 항목이 테스트완료 되었습니다.";
+				
+				param.put("member_no", req_user_no);
+	    		param.put("req_user_mobile_no", mobile_no);
+				param.put("sms_msg", sms_msg);
+				commonSmsSend(param);
+			}
+    		
+    		
+    		
+            result = "00";
+            
+            //log.info( "taskReqSet param : " + param );
+        } 
+        catch(Exception e) {
+            e.printStackTrace();
+            throw e;
+        }
+        finally {
+            log.info( "taskReqSet result : " + result );
+        }
+        
+        return result;
+    }
+    
+    public String taskReqListChgState( HttpServletRequest req, Map<String, Object> param) throws Exception {
+        
+        String result = "";
+        String mobile_no ="";
+        String seq  = param.get("task_seq").toString();
+        String msg = param.get("msg").toString();
+        String sms_msg ="지원요청 ["+seq+"] 항목이 "+msg+" 되었습니다.";
+        
+        String bef_proc_state_cd = param.get("bef_proc_state_cd").toString();
+        String proc_state_cd = param.get("proc_state_cd").toString();
+        
+        // 접수에서 다이렉트로 운영배포완료 시 접수일시를 반영완료일시 -10분으로 자동셋팅시킴.
+        /*if("009".equals(proc_state_cd)
+        		&& ("000".equals(bef_proc_state_cd) || "010".equals(bef_proc_state_cd) || "014".equals(bef_proc_state_cd))){
+        	param.put("direct009_Insert", "Y");
+        }else if("001".equals(proc_state_cd)){
+        	param.put("direct009_Insert", "N");
+        }else{
+        	param.put("direct009_Insert", "");
+        }*/
+        
+  		try {
+    		
+  			Map<String, Object> memberMap = new HashMap<String, Object>();
+  			memberMap = (Map<String, Object>) getSqlMapClientTemplate().queryForObject("ammember.Detail", param);
+    		mobile_no = memberMap.get("MOBILE_NO")==null?"":memberMap.get("MOBILE_NO").toString();
+    		param.put("req_user_mobile_no", mobile_no);
+			param.put("sms_msg", sms_msg);
+			commonSmsSend(param);
+			getSqlMapClientTemplate().update("taskreq.UpdateState", param);
+			
+    		
+        } 
+        catch(Exception e) {
+            e.printStackTrace();
+            throw e;
+        }
+        finally {
+            log.info( "taskReqListChgState result : " + result );
+        }
+        
+        return result;
+    }
+    
+
+    public String getTaskSeq() {
+		return (String) getSqlMapClientTemplate().queryForObject("taskreq.getTaskSeq");
+	}
+      
+    /**
+     * [이력 목록 팝업]
+     * 
+     * @param req
+     * @param param
+     * @return
+     * @throws Exception
+     */
+    public Map<String, Object> taskReqHstListPopup( HttpServletRequest req, Map<String, Object> param ) throws Exception {
+        Map<String, Object> model = new HashMap<String, Object>();
+        //model.put( "list", getSqlMapClientTemplate().queryForList( "taskreq.taskReqHstList", param ) );
+        //model.put( "totCount", (String)getSqlMapClientTemplate().queryForObject( "taskreq.taskReqHstListCount", param ) );
+        
+        return model;
+    }
+    
+    /**
+     * [요구사항 리스트 목록조회]
+     * 
+     * @param param
+     * @return
+     */
+    public GridPagedList<Map<String, Object>> getTaskReqHstList(Map<String, Object> param) {
+		return new GridPagedList<Map<String, Object>>(getSqlMapClientTemplate(), "taskreq.taskReqHstList", param);
+	}
+    
+    /**
+     * [이력 상세 팝업]
+     * 
+     * @param req
+     * @param param
+     * @return
+     * @throws Exception
+     */
+    public Map<String, Object> taskReqHstPopup( HttpServletRequest req, Map<String, Object> param ) throws Exception {
+        Map<String, Object> model = new HashMap<String, Object>();
+        model.put( "detailHst", getSqlMapClientTemplate().queryForObject( "taskreq.taskReqHstView", param ) );
+        
+        return model;
+    }
+    
+    /**
+     * [요구사항 리스트 엑셀]
+     * 
+     * @param req
+     * @param param
+     * @return
+     * @throws Exception
+     */
+    public Map<String, Object> taskReqListExcel( HttpServletRequest req, Map<String, Object> param ) throws Exception {
+    	
+    	String seach_dt_from = (String)param.get( "seach_dt_from" );
+		String seach_dt_to = (String)param.get( "seach_dt_to" );
+		
+		if(seach_dt_from == null && seach_dt_to == null) {
+			 param.put( "seach_dt_from", param.get( "seach_dt_from" )==null?dateUtil.getYearMonthDay( -7, "" ):(String)param.get( "seach_dt_from" ) );
+		     param.put( "seach_dt_to",   param.get( "seach_dt_to" )==null?dateUtil.getYearMonthDay():(String)param.get( "seach_dt_to" ) );
+		}
+
+        Map<String, Object> model = new HashMap<String, Object>();
+        model.put( "list", getSqlMapClientTemplate().queryForList( "taskreq.taskReqListExcel", param ) );
+        
+        return model;
+    }
+    
+    /**
+     * [개발완료예정일자 구하기]
+     * 
+     * @param req
+     * @param param
+     * @return
+     * @throws Exception
+     */
+    public String getBizDate( HttpServletRequest req, Map<String, Object> param ) throws Exception {
+        return (String) getSqlMapClientTemplate().queryForObject( "taskreq.getBizDate", param );
+    }
+    
+    
+    /**
+	 * [문자 바이트 수 구하기]
+	 * @param msg
+	 * @return
+	 */
+	public int bytes(String msg)
+	{
+		int len = msg.getBytes().length;
+		return len;
+	}
+	
+	/**
+	 * [char[] -> String[]]
+	 * @param msg
+	 * @return
+	 */
+	public String[] arrayChar(String msg)
+	{
+		char cc[] = msg.toCharArray();
+		String ss[] = new String[cc.length];
+		for(int i=0; i < cc.length ; i++){
+			ss[i] = cc[i]+"";
+		}
+		
+		return ss;
+	}
+	
+	public String commonSmsSend(Map<String,Object> param) throws Exception
+	{
+		String result = "T";
+		
+		try{
+			
+			String send_msg = (param.get("sms_msg").toString());
+			
+			// 받는 사람 번호 체크
+			String sms_call_no1 = "";
+			String sms_call_no2 = "";
+			String sms_call_no3 = "";
+			
+			String user_mobile_no_substr = "";
+			// 고객지원 요청한 요청자연락처
+            String userMobile_no = (String) param.get("req_user_mobile_no");
+            String user_mobile_no = userMobile_no.replace("-", "");
+			user_mobile_no_substr = user_mobile_no.substring(0, 3);
+			if("010".equals(user_mobile_no_substr)){
+    			log.info( "***************** user_mobile_no 전화번호 앞자리가 010이라면 ******" + userMobile_no);
+
+				sms_call_no1 = user_mobile_no.substring(0, 3);
+				sms_call_no2 = user_mobile_no.substring(3, 7);
+				sms_call_no3 = user_mobile_no.substring(7);
+				
+				param.put("sms_call_no1", sms_call_no1);
+				param.put("sms_call_no2", sms_call_no2);
+				param.put("sms_call_no3", sms_call_no3);
+				param.put("sms_reserve_time", "00000000000000");
+				param.put("sms_div", "1");
+				param.put("sms_hist_insert", "N");
+				param.put("sms_call_name", "ADMIN_SUPPORT");
+				param.put("sms_message", send_msg);
+				param.put("sms_req_no1", "1599");
+				param.put("sms_req_no2", "0038");
+				param.put("sms_req_no3", "");
+				param.put("send_member", "99901");
+				param.put("sms_req_name"  , "우리금융저축은행");
+				param.put("sms_agt_id"    , "99901");
+				
+				getSqlMapClientTemplate().insert("smsdata.InsertCUSTSMS", param);
+			
+			}
+			System.out.println("# commonSmsSend ok");
+		} catch(Exception e){
+			log.info("# commonSmsSend Error : "+e);
+			System.out.println("# commonSmsSend Error : "+e);
+			result = "F"; 
+		}
+		
+		return result;
+	}
+    	
+}
