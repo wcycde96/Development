@@ -1,0 +1,2084 @@
+<%@ page language="java" contentType="text/html; charset=EUC-KR" pageEncoding="EUC-KR"%>
+<%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
+<%@ taglib prefix="fn" uri="http://java.sun.com/jsp/jstl/functions" %>
+<%@ taglib prefix="t" uri="/WEB-INF/tld/format.tld" %>
+<!DOCTYPE html>
+<html>
+
+<head>
+<meta charset="EUC-KR">
+<meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+<title>고객 지원</title>
+<link rel="stylesheet" href="${pageContext.request.contextPath }/bootstrap/css/bootstrap.min.css">
+<link rel="stylesheet" href="${pageContext.request.contextPath }/bootstrap/css/bootstrap.custom.css">
+<link rel="stylesheet" href="${pageContext.request.contextPath }/jquery/css/jquery-ui.min.css">
+<style type="text/css">
+input.link {
+	border-top: 0px;
+	border-left: 0px;
+	border-right: 0px;
+	border-radius: 0px;
+}
+</style>
+</head>
+<body>
+ 	<!--  최초 등록	-->	<c:set value="${ detail.TASK_SEQ eq null }" var="registration"/>
+	<!--  정보지원부	-->	<c:set value="${ sessionScope.ss_user.role_cd == '08' }" var="information"/>
+	<!--  포이시스		-->	<c:set value="${ sessionScope.ss_user.role_cd == '09' }" var="foresys"/>
+	<!--  요청승인자	-->	<c:set value="${ detail.TASK_SEQ ne null && sessionScope.ss_user.checker!=null && detail.DEPT_CD == sessionScope.ss_user.dept_cd }" var="req"/><!-- 세션의 체커여부, 등록폼 dept_cd==세션 dept_cd -->
+	<!--  접수승인자	-->	<c:set value="${ detail.TASK_SEQ ne null && sessionScope.ss_user.checker!=null && sessionScope.ss_user.dept_cd =='1304' }" var="rcpt"/><!-- 세션의 체커여부, 접수 승인자는 정보지원부 -->
+	<c:set var="defaultOptionText" value="선택" />
+	<div class="" style="padding: 5px;">
+	
+	<div>
+		<ul class="nav nav-tabs">
+			<!-- <li role="presentation"><a onclick="goList();">목록</a></li> -->
+			<li role="presentation" class="active"><a href="#"><c:if test="${registration}">등록</c:if><c:if test="${!registration}">상세조회</c:if></a></li>
+			<li style="padding-left:900px;">
+				<input type="button" name="closebtn" class="btn btn-default" value="닫  기" onclick="javascript:self.close();">
+			</li>
+		</ul>
+	</div>
+		
+	<form id="userForm" name="userForm">
+	
+		<input type="hidden" name="task_seq" id="task_seq" value="${detail.TASK_SEQ }" />			
+		<input type="hidden" name="req_dt" id="req_dt" value="${detail.REQ_DT}" />
+		<input type="hidden" name="rcpt_dt" id="rcpt_dt" value="${detail.RCPT_DT}" />
+		<input type="hidden" name="start_dt" id="start_dt" value="${detail.START_DT}" />
+		<input type="hidden" name="end_dt" id="end_dt" value="${detail.END_DT}" />
+		<input type="hidden" name="cplt_psb_dt" id="cplt_psb_dt" value="${detail.CPLT_PSB_DT}" />
+		<input type="hidden" name="update_apply_dt" id="update_apply_dt" value="${detail.UPDATE_APPLY_DT}" />
+		<input type="hidden" name="update_end_dt" id="update_end_dt" value="${detail.UPDATE_END_DT}" />
+		<input type="hidden" name="test_end_dt" id="test_end_dt" value="${detail.TEST_END_DT}" />
+		
+		<input type="hidden" name="req_user_no" id="req_user_no" value="${not empty detail.TASK_SEQ ? detail.REQ_USER_NO : sessionScope.ss_user.member_no }" />
+		<input type="hidden" name="dept_cd" id="dept_cd" value="${not empty detail.TASK_SEQ ? detail.DEPT_CD : sessionScope.ss_user.dept_cd }" />
+		<input type="hidden" name="branch_cd" id="branch_cd" value="${not empty detail.TASK_SEQ ? detail.BRANCH_CD : sessionScope.ss_user.branch_cd }" />
+		<input type="hidden" name="company_cd" id="company_cd" value="403" />
+		
+		<input type="hidden" name="proc_state_cd_ori" id="proc_state_cd_ori" value="${detail.PROC_STATE_CD}" />
+		
+		<c:if test="${registration}">
+			<input type="hidden" name="proc_state_cd" id="proc_state_cd" value="010" />
+		</c:if>
+		<!-- <input type="hidden" name="settle_state_cd" id="settle_state_cd" value="001" /> -->	<!-- 결재진행상황([Z_925]001:검토) -->
+		<input type="hidden" name="settle_admin_no" id="settle_admin_no" value="99930" />	<!-- 결재자(99930:조태환이사) -->
+		<input type="hidden" name="proc_gubun" id="proc_gubun" />	<!-- 처리구분 1:요청처리, 2:테스트완료처리 -->
+		<input type="hidden" name="direct_check_yn" id="direct_check_yn" />	<!-- 전산팀 즉시처리 여부 -->
+		
+		
+		<input type="hidden" name="sms_receive_yn" id="sms_receive_yn" value="Y" />	<!-- sms수신여부(Y/N) -->
+		
+		<!-- 자료요청 파일첨부 열기 -->
+		<input type="hidden" name="dir" id="dir" />
+		<input type="hidden" name="file" id="file" />
+		<input type="hidden" name="uri" id="uri" />
+		<input type="hidden" name="type" id="type" />
+
+		<input type="hidden" name="hst_flag"/>
+			
+			<h4>
+				■ 요청사항
+			</h4>
+			<table class="table table-bordered" style="margin-bottom: 0px;">
+				<colgroup>
+					<col width="15%" />
+					<col width="35%" />
+					<col width="15%" />
+					<col width="35%" />
+				</colgroup>
+				<tbody>
+					<tr>
+					
+					
+						<th>요청일자</th>
+						<td>
+						<!-- 
+						<c:if test="${ foresys }">
+							<input type="text" name="req_dt_date" id="req_dt_date" class="form-control input-ssm date" style="width: 100px;" 
+									value="${not empty detail.TASK_SEQ ? detail.REQ_DT_DATE : DATE }" />
+								
+							<select  style="width: 23%" name="req_dt_hour" id="req_dt_hour" class="form-control input-ssm">
+								<option value="">${defaultOptionText }</option>
+								<c:set value="${not empty detail.TASK_SEQ ? detail.REQ_DT_HOUR : HOUR }" var="SET_HOUR"/>
+								<c:forEach var="item" items="${Z_HOUR }">
+									<option value="${item.CODE}"<c:if test="${SET_HOUR == item.CODE}" >selected="selected" </c:if>>${item.NAME}시</option>
+								</c:forEach>
+							</select>
+							
+							<select style="width: 23%" name="req_dt_minute" id="req_dt_minute" class="form-control input-ssm">
+								<option value="">${defaultOptionText }</option>
+								<c:set value="${not empty detail.TASK_SEQ ? detail.REQ_DT_MINUTE : MINUTE }" var="SET_MINUTE"/>
+								<c:forEach var="item" items="${Z_MIN }">
+									<option value="${item.CODE}" <c:if test="${SET_MINUTE == item.CODE}" >selected="selected" </c:if>>${item.NAME}분</option>
+								</c:forEach>
+							</select>
+						</c:if>-->
+						
+							<t:fm type="DATIME5" value="${detail.REQ_DT}"/>
+							<input type="hidden" name="req_dt_date" id="req_dt_date" value="${!registration ? detail.REQ_DT_DATE : DATE }" />
+							<input type="hidden" name="req_dt_hour" id="req_dt_hour" value="${!registration ? detail.REQ_DT_HOUR : HOUR }" />
+							<input type="hidden" name="req_dt_minute" id="req_dt_minute" value="${!registration ? detail.REQ_DT_MINUTE : MINUTE }" />
+						</td>
+						
+						<th>요청상태</th>
+								<td colspan="3">
+									<c:if test="${ registration}">
+										<input type="radio" name="process_cd" name="process_cd" value="P" checked="checked"> 사전요청
+										<input type="radio" name="process_cd" name="process_cd" value="N"> 즉시요청
+									</c:if>
+									<c:if test="${ !registration}">
+										<c:if test="${detail.PROCESS_CD=='P'}">사전요청</c:if>
+										<c:if test="${detail.PROCESS_CD=='N'}"><font color="red">즉시요청</font></c:if>
+									</c:if>
+					</tr>
+					<tr>
+						<th>요청자</th>
+						<td>
+							${not empty detail.REQ_USER_NM ? detail.REQ_USER_NM : sessionScope.ss_user.member_nm }
+						</td>
+						<th>부서</th>
+						<td>
+							${not empty detail.BRANCH_NM ? detail.BRANCH_NM : sessionScope.ss_user.branch_nm }
+							&nbsp;
+							${not empty detail.DEPT_NM ? detail.DEPT_NM : sessionScope.ss_user.dept_nm }
+						</td>
+					</tr>
+					<!--<tr>
+						<th>요청종류<span style="color:red">*</span></th>
+						<td>
+							<select name="req_kind" id="req_kind" class="form-control input-ssm" onchange="chkFilePwd();">
+								<option value="">${defaultOptionText }</option>
+								<c:forEach var="item" items="${Z_930}">
+									<option value="${item.CODE }" ${item.CODE eq detail.REQ_KIND ? 'selected=\'selected\'' : '' }>${item.NAME }</option>
+								</c:forEach>
+							</select>
+						</td>
+						<th</th>
+						<td></td>
+						<th>요청종류상세</th>
+						<td colspan="3">
+							<select name="req_range_cd" id="req_range_cd" class="form-control input-ssm" style="width:40%">
+								<option value="">${defaultOptionText }</option>
+								<c:forEach var="item" items="${Z_929 }">
+									<option value="${item.CODE }" ${item.CODE eq detail.REQ_RANGE_CD ? 'selected=\'selected\'' : '' }>${item.NAME }</option>
+								</c:forEach>
+							</select>
+						</td>
+					</tr>
+					<tr>
+						<th>요청구분</th>
+						<td>
+							<select name="rcpt_cd" id="rcpt_cd" class="form-control input-ssm">
+								<option value="">${defaultOptionText }</option>
+								<c:forEach var="item" items="${Z_927 }">
+									<c:if test="${sessionScope.ss_user.role_cd != '09' && item.CODE == '000'}">
+										<option value="${item.CODE }" ${item.CODE eq detail.RCPT_CD ? 'selected=\'selected\'' : '' }>${item.NAME }</option>
+									</c:if>
+									<c:if test="${sessionScope.ss_user.role_cd == '09'}">
+										<option value="${item.CODE }" ${item.CODE eq detail.RCPT_CD ? 'selected=\'selected\'' : '' }>${item.NAME }</option>
+									</c:if>
+								</c:forEach>
+							</select>
+						</td>
+						<th>시스템</th>
+						<td>
+							<select name="sys_cd" id="sys_cd" class="form-control input-ssm">
+								<option value="">${defaultOptionText }</option>
+								<c:forEach var="item" items="${Z_926}">
+									<option value="${item.CODE }" ${item.CODE eq detail.SYS_CD ? 'selected=\'selected\'' : '' }>${item.NAME }</option>
+								</c:forEach>
+							</select>
+						</td>-->
+					</tr>
+					<tr>
+						<th>요청사항 제목(${detail.TASK_SEQ})<span style="color:red">*</span></th>
+						<td colspan="3"><textarea style="height: 40px" name="req_title" id="req_title" class="form-control input-ssm" rows="6" 
+						<c:if test="${!registration&&(detail.DEPT_CD != sessionScope.ss_user.dept_cd)}"> readonly </c:if>>${detail.REQ_TITLE }</textarea></td>
+					</tr>
+					<tr>
+						<th>요청사항 상세<span style="color:red">*</span></th>
+						<td colspan="3"><textarea style="font-size : 20px; height: 400px;" name="req_content" id="req_content" class="form-control input-ssm" rows="6"
+						<c:if test="${!registration&&(detail.DEPT_CD != sessionScope.ss_user.dept_cd)}"> readonly </c:if>>${detail.REQ_CONTENT }</textarea></td>
+					</tr>
+					
+					
+					<tr>
+						<th>테스트완료일자</th>
+						<td colspan="3">
+						<c:choose>
+							<c:when test="${!registration && (detail.PROC_STATE_CD == '012')}">	<!-- 012:개발완료 -->
+								
+								<input type="text" name="test_end_dt_date" id="test_end_dt_date" class="form-control input-ssm date" style="width: 100px;" 
+								value="${!registration ? detail.TEST_END_DT_DATE : '' }" />
+								
+								<select style="width: 75px" name="test_end_dt_hour" id="test_end_dt_hour" class="form-control input-ssm">
+								<option value="">${defaultOptionText }</option>
+								<c:set value="${!registration ? detail.TEST_END_DT_HOUR : '' }" var="SET_HOUR"/>
+								<c:forEach var="item" items="${Z_HOUR }">
+									<option value="${item.CODE}" <c:if test="${SET_HOUR == item.CODE}" >selected="selected" </c:if>>${item.NAME}시</option>
+								</c:forEach>
+								</select>
+								
+								<select style="width: 75px" name="test_end_dt_minute" id="test_end_dt_minute" class="form-control input-ssm">
+									<option value="">${defaultOptionText }</option>
+									<c:set value="${!registration ? detail.TEST_END_DT_MINUTE : '' }" var="SET_MINUTE"/>
+									<c:forEach var="item" items="${Z_MIN }">
+										<option value="${item.CODE}" <c:if test="${SET_MINUTE == item.CODE}" >selected="selected" </c:if>>${item.NAME}분</option>
+									</c:forEach>
+								</select>
+								<!-- <input type="button" id="button-testdate-set" name="button-testdate-set" class="btn btn-xs" value="일자SET"> -->
+								<input type="button" id="button-req-set" name="button-req-set" class="btn btn-xs" value="테스트완료처리">
+							</c:when>
+							<c:otherwise>
+								<t:fm type="DATE" value="${detail.TEST_END_DT_DATE }"/>
+							</c:otherwise>
+						</c:choose>
+						</td>
+					</tr>
+					
+					<tr>
+						<th>
+							<span id="divFilePwd1" style="display:none;">
+								비밀번호
+							</span>
+						</th>
+						<td colspan="3">
+							<span id="divFilePwd2" style="display:none;">
+								<c:if test="${registration }">
+									<input type="text" name="file_pwd" id="file_pwd" value="${not empty detail.FILE_PWD ? '****' : ''}" maxlength="6" class="form-control input-ssm" style="width:25%">
+								</c:if>
+								<c:if test="${!registration }">
+									${not empty detail.FILE_PWD ? '****' : ''}
+									<input type="hidden" name="file_pwd" id="file_pwd" value="${detail.FILE_PWD}">
+								</c:if>
+									</span>
+								</td>
+							</tr>
+						</table>
+
+			<h5>&nbsp; * 자료추출요청의 경우 요청종류를 [자료요청] 으로 등록해주세요.</h5>
+
+			<br>
+
+			<c:if test="${!registration}"><!-- 상세 조회부터 view edit 가능 -->
+				
+				<h4>■ 요청부서 결재</h4>
+				<table class="table table-bordered" style="margin-bottom: 0px;">
+					<colgroup>
+						<col width="15%" />
+						<col width="35%" />
+						<col width="15%" />
+						<col width="35%" />
+					</colgroup>
+					
+					<tr>
+						<th>요청처리 구분</th>
+						<td>
+							<c:choose>
+							
+								<c:when test="${req && ('010' eq detail.PROC_STATE_CD || '017' eq detail.PROC_STATE_CD || 
+												'018' eq detail.PROC_STATE_CD || '019' eq detail.PROC_STATE_CD)}"><!-- 처리사항을 변경 할 수 있는 권한 -->
+									<select name="req_proc_state_cd" id="req_proc_state_cd" class="form-control input-ssm">
+										<option value="">${defaultOptionText }</option>
+										<option value="017" ${'017' eq detail.PROC_STATE_CD ? 'selected=\'selected\'' : '' }>요청승인완료</option>
+										<option value="018" ${'018' eq detail.PROC_STATE_CD ? 'selected=\'selected\'' : '' }>요청승인보류</option>
+										<option value="019" ${'019' eq detail.PROC_STATE_CD ? 'selected=\'selected\'' : '' }>요청승인거절</option>
+									</select>		
+								</c:when>
+								
+								<c:when test="${!req&& }">
+								<select name="" id="" class="form-control input-ssm">
+										<option value="">${defaultOptionText }</option>
+										<option value="017" ${'017' eq detail.PROC_STATE_CD ? 'selected=\'selected\'' : '' }>요청승인완료</option>
+										<option value="018" ${'018' eq detail.PROC_STATE_CD ? 'selected=\'selected\'' : '' }>요청승인보류</option>
+										<option value="019" ${'019' eq detail.PROC_STATE_CD ? 'selected=\'selected\'' : '' }>요청승인거절</option>
+									</select>
+								</c:when>
+								
+								<c:when test="${detail.RCPT.CHECKER_NO!= '' }">
+									결재완료
+								</c:when>
+								
+								<c:otherwise>
+									승인대기
+								</c:otherwise>
+							
+								</c:choose>	
+							</td>
+						
+						<th>요청부서 결재자</th>
+						<td>${detail.REQ_CHECKER}</td>
+					</tr>
+
+					<tr>
+						<th>요청승인내용</th>
+						<td colspan="3">
+						<c:choose>
+						
+							<c:when test="${req && ('017' eq detail.PROC_STATE_CD || '018' eq detail.PROC_STATE_CD ||
+												    '019' eq detail.PROC_STATE_CD || '010' eq detail.PROC_STATE_CD) }">
+								<textarea name="req_checker_content" id="req_checker_content" class="form-control input-ssm" rows="4">${detail.REQ_CHECKER_CONTENT }</textarea>
+							</c:when>
+								
+							<c:otherwise>
+								<textarea name="req_checker_content" id="req_checker_content" class="form-control input-ssm" rows="4" readonly>${detail.REQ_CHECKER_CONTENT }</textarea>
+							</c:otherwise>
+							
+						</c:choose>
+						</td>
+						
+					</tr>			
+				</table>
+				<c:if test="${!registration && req && detail.RCPT_CHECKER_NO=='' }">
+					<div align="center"><button class="btn btn-default" id="button-req-approve">요청승인</button></div>
+				</c:if>
+				<c:if test="${!registration && (information || foresys) && detail.PROC_STATE_CD=='017'}"><!-- ##포이 삭제 -->
+				<button id="button_req_change" name="button_req_change" class="btn btn-default">상태변경</button>
+				</c:if>
+				
+			<h4>■ 접수부서 결재</h4>
+				<table class="table table-bordered" style="margin-bottom: 0px;">
+					<colgroup>
+						<col width="15%" />
+						<col width="35%" />
+						<col width="15%" />
+						<col width="35%" />
+					</colgroup>
+					
+					<th>접수처리 구분</th>
+								
+						<!-- ####test  :rcptT - rcpt -->
+									<!--  c:if test="${foresys }"
+										c:forEach var="item" items="${Z_924 }"
+											option value="${item.CODE }"
+												${item.CODE eq detail.PROC_STATE_CD ? 'selected=\'selected\'' : '' }${item.NAME }/option
+										/c:forEach>
+									/c:if -->
+					<td><c:choose>
+						<c:when test="${rcpt &&('020' eq detail.PROC_STATE_CD || '021' eq detail.PROC_STATE_CD ||
+									    '022' eq detail.PROC_STATE_CD || '023' eq detail.PROC_STATE_CD) }">
+							<select name="rcpt_proc_state_cd" id="rcpt_proc_state_cd" class="form-control input-ssm">
+									<option value="">${defaultOptionText }</option>
+									<option value="021" ${'021' eq detail.PROC_STATE_CD ? 'selected=\'selected\'' : '' }>접수승인완료</option>
+									<option value="022" ${'022' eq detail.PROC_STATE_CD ? 'selected=\'selected\'' : '' }>접수승인보류</option>
+									<option value="023" ${'023' eq detail.PROC_STATE_CD ? 'selected=\'selected\'' : '' }>접수승인거절</option>
+
+										
+							</select>
+						</c:when>
+						
+						<c:when test="${'010' eq detail.PROC_STATE_CD || '017' eq detail.PROC_STATE_CD || '018' eq detail.PROC_STATE_CD || '019' eq detail.PROC_STATE_CD }">
+							요청부서 처리 중
+						</c:when>
+
+						<c:otherwise>
+							결재 완료
+						</c:otherwise>
+						
+					</c:choose></td>
+					<th>접수부서 결재자</th>
+					<td>${detail.RCPT_CHECKER}</td>
+				</tr>
+				
+				<tr>
+					<th>접수승인내용</th>
+						
+					<td colspan="3">
+					<c:choose>
+						<c:when test="${rcpt &&('020' eq detail.PROC_STATE_CD || '021' eq detail.PROC_STATE_CD ||
+									    '022' eq detail.PROC_STATE_CD || '023' eq detail.PROC_STATE_CD) }">
+							<textarea name="rcpt_checker_content" id="rcpt_checker_content" class="form-control input-ssm" rows="4">${detail.RCPT_CHECKER_CONTENT }</textarea>
+						</c:when>
+						
+						<c:otherwise>
+							<textarea name="rcpt_checker_content" id="rcpt_checker_content" class="form-control input-ssm" rows="4" readonly>${detail.RCPT_CHECKER_CONTENT }</textarea>
+						</c:otherwise>
+					</c:choose>
+					</td>
+				</tr>
+				
+				<tr>
+					<th>SR중요도선택</th>
+					<c:choose>
+						<c:when test="${rcpt &&('020' eq detail.PROC_STATE_CD || '021' eq detail.PROC_STATE_CD ||
+									    		'022' eq detail.PROC_STATE_CD || '023' eq detail.PROC_STATE_CD) }">
+							<td>
+							<select name="for_test_yn" id="for_test_yn" class="form-control input-ssm">
+									<option value="N" ${'N' eq detail.PROC_STATE_CD ? 'selected=\'selected\'' : '' }>일반SR</option>		
+									<option value="Y" ${'Y' eq detail.PROC_STATE_CD ? 'selected=\'selected\'' : '' }>중요SR</option>		
+							</select>
+						</c:when>
+						<c:otherwise>
+							<td>${detail.FOR_TEST_YN=='Y'? '중요SR' : '기본SR'  }</td>
+						</c:otherwise>
+					</c:choose>
+						<td colspan="2">※중요도 선택 시 현업 부서의 테스트 결과를 반영해야 최종완료 처리</td>
+					
+				</tr>
+				</table>
+				<c:if test="${!registration && rcpt }">
+				<div align="center"><button class="btn btn-default" id="button-rcpt-approve">접수승인</button></th></div>
+				</c:if>
+			</c:if>
+
+			<!--
+			<c:if test="${!registration && (information || foresys)}">##포이 삭제 
+						<h4>
+							<font color="blue">■ 정보지원부 확인사항</font>
+						</h4>
+						<table class="table table-bordered" style="margin-bottom: 0px;">
+							<colgroup>
+								<col width="15%" />
+								<col width="35%" />
+								<col width="15%" />
+								<col width="35%" />
+							</colgroup>
+							<tbody>
+							<c:if test="${detail.PROC_STATE_CD =='017' || detail.PROC_STATE_CD =='021'}">
+								<tr>
+								<th>요청처리</th>
+								<td>
+								
+									<select name="it_proc_state_cd" id="it_proc_state_cd" class="form-control input-ssm">
+										<option value="">${defaultOptionText }</option>								
+										<c:if test="${ empty detail.RCPT_CHECKER_NO}">
+											<option value="000">요청승인 접수</option>
+										</c:if>
+										
+										<c:if test="${ not empty detail.RCPT_CHECKER_NO}">
+											<option value="001" ${'001' eq detail.PROC_STATE_CD ? 'selected=\'selected\'' : '' }>접수승인 접수</option>
+											<option value="003" ${'003' eq detail.PROC_STATE_CD ? 'selected=\'selected\'' : '' }>보류,제외</option>
+											<option value="015" ${'015' eq detail.PROC_STATE_CD ? 'selected=\'selected\'' : '' }>포이_요청</option>
+										</c:if>
+			 						</select>
+										
+								</td>
+								
+								<td>
+									<button id="button_req_rcpt" name="button_req_rcpt" class="btn btn-default">접수</button>					
+								</td>
+							</c:if>
+						<th></th>
+						<td></td>
+					</table>
+					
+
+					<c:if
+						test="${(information || foresys) && (detail.PROC_STATE_CD =='017')} ">
+						<div style="text-align: center; padding-top: 5px;">
+							<button type="button" id="button-req-set" name="button-req-set" class="btn btn-default" value="요청처리">요청처리</button>
+						</div>
+					</c:if>
+
+							</tr>
+							<br>
+			</c:if>
+			-->
+			<!-- 처리사항 edit모드는 정보지원부와 포이시스만 권한이 가능하며 (요청결재, 접수결재)이후에 처리가능 AND 결재거절상태에서는 view edit 둘다 접근X -->
+<c:if test="${!registration && (information || foresys)  }">
+
+				<!-- new 등록 + 포이 + 정보지원부 + (우리가 요청)  에디트 모드-->
+				<h4>
+					<font color="blue">■ 처리사항</font>
+				</h4>
+				<table class="table table-bordered" style="margin-bottom: 0px;">
+					<colgroup>
+						<col width="15%" />
+						<col width="35%" />
+						<col width="15%" />
+						<col width="35%" />
+					</colgroup>
+					<tbody>
+						<tr>
+							<th>접수일자<span style="color: red">*</span></th>
+							<td><input type="text" name="rcpt_dt_date" id="rcpt_dt_date"
+								class="form-control input-ssm date" style="width: 100px;"
+								value="${not empty detail.TASK_SEQ ? detail.RCPT_DT_DATE : '' }" />
+
+								<select style="width: 23%" name="rcpt_dt_hour" id="rcpt_dt_hour"
+								class="form-control input-ssm">
+									<option value="">${defaultOptionText }</option>
+									<c:set
+										value="${not empty detail.TASK_SEQ ? detail.RCPT_DT_HOUR : '' }"
+										var="SET_HOUR" />
+									<c:forEach var="item" items="${Z_HOUR }">
+										<option value="${item.CODE}"
+											<c:if test="${SET_HOUR == item.CODE}" >selected="selected" </c:if>>${item.NAME}시</option>
+									</c:forEach>
+							</select> <select style="width: 23%" name="rcpt_dt_minute"
+								id="rcpt_dt_minute" class="form-control input-ssm">
+									<option value="">${defaultOptionText }</option>
+									<c:set
+										value="${not empty detail.TASK_SEQ ? detail.RCPT_DT_MINUTE : '' }"
+										var="SET_MINUTE" />
+									<c:forEach var="item" items="${Z_MIN }">
+										<option value="${item.CODE}"
+											<c:if test="${SET_MINUTE == item.CODE}" >selected="selected" </c:if>>${item.NAME}분</option>
+									</c:forEach>
+							</select></td>
+							<th>접수자</th>
+							<td><select name="rcpt_admin_no" id="rcpt_admin_no"
+								class="form-control input-ssm">
+									<option value="">${defaultOptionText }</option>
+									<c:forEach var="li" items="${Z_14}">
+										<option value="${li.CODE}"
+											${li.CODE eq detail.PROC_ADMIN_NO ? 'selected=\'selected\'' : '' }>${li.NAME}</option>
+									</c:forEach>
+							</select></td>
+						</tr>
+						<tr>
+							<th>개발예상기간</th>
+							<td><select name="apply_dcnt" id="apply_dcnt"
+								class="form-control input-ssm" style="width: 100px;">
+									<option value="">${defaultOptionText }</option>
+									<c:forEach var="item" items="${Z_DD }">
+										<option value="${item.CODE}"
+											<c:if test="${detail.APPLY_DCNT == item.CODE}" >selected="selected" </c:if>>${item.NAME}일</option>
+									</c:forEach>
+							</select></td>
+							<th>개발완료가능일자</th>
+							<td><input type="text" name="cplt_psb_dt_date"
+								id="cplt_psb_dt_date" class="form-control input-ssm date"
+								style="width: 100px;"
+								value="${not empty detail.TASK_SEQ ? detail.CPLT_PSB_DT_DATE : '' }" />
+
+								<select style="width: 23%" name="cplt_psb_dt_hour"
+								id="cplt_psb_dt_hour" class="form-control input-ssm">
+									<option value="">${defaultOptionText }</option>
+									<c:set
+										value="${not empty detail.TASK_SEQ ? detail.CPLT_PSB_DT_HOUR : '' }"
+										var="SET_HOUR" />
+									<c:forEach var="item" items="${Z_HOUR }">
+										<option value="${item.CODE}"
+											<c:if test="${SET_HOUR == item.CODE}" >selected="selected" </c:if>>${item.NAME}시</option>
+									</c:forEach>
+							</select> <select style="width: 23%" name="cplt_psb_dt_minute"
+								id="cplt_psb_dt_minute" class="form-control input-ssm">
+									<option value="">${defaultOptionText }</option>
+									<c:set
+										value="${not empty detail.TASK_SEQ ? detail.CPLT_PSB_DT_MINUTE : '' }"
+										var="SET_MINUTE" />
+									<c:forEach var="item" items="${Z_MIN }">
+										<option value="${item.CODE}"
+											<c:if test="${SET_MINUTE == item.CODE}" >selected="selected" </c:if>>${item.NAME}분</option>
+									</c:forEach>
+							</select> <c:if test="${not empty detail.TASK_SEQ}">
+									<!-- <input type="button" id="button-date-set" name="button-date-set" class="btn btn-xs" value="일자SET"> -->
+								</c:if></td>
+						</tr>
+						<tr>
+							<th>개발시작일자</th>
+							<td><input type="text" name="start_dt_date"
+								id="start_dt_date" class="form-control input-ssm date"
+								style="width: 100px;"
+								value="${not empty detail.TASK_SEQ ? detail.START_DT_DATE : '' }" />
+
+								<select style="width: 23%" name="start_dt_hour"
+								id="start_dt_hour" class="form-control input-ssm">
+									<option value="">${defaultOptionText }</option>
+									<c:set
+										value="${not empty detail.TASK_SEQ ? detail.START_DT_HOUR : '' }"
+										var="SET_HOUR" />
+									<c:forEach var="item" items="${Z_HOUR }">
+										<option value="${item.CODE}"
+											<c:if test="${SET_HOUR == item.CODE}" >selected="selected" </c:if>>${item.NAME}시</option>
+									</c:forEach>
+							</select> <select style="width: 23%" name="start_dt_minute"
+								id="start_dt_minute" class="form-control input-ssm">
+									<option value="">${defaultOptionText }</option>
+									<c:set
+										value="${not empty detail.TASK_SEQ ? detail.START_DT_MINUTE : '' }"
+										var="SET_MINUTE" />
+									<c:forEach var="item" items="${Z_MIN }">
+										<option value="${item.CODE}"
+											<c:if test="${SET_MINUTE == item.CODE}" >selected="selected" </c:if>>${item.NAME}분</option>
+									</c:forEach>
+							</select></td>
+							<th>개발완료일자</th>
+							<td><input type="text" name="end_dt_date" id="end_dt_date"
+								class="form-control input-ssm date" style="width: 100px;"
+								value="${not empty detail.TASK_SEQ ? detail.END_DT_DATE : '' }" />
+
+								<select style="width: 23%" name="end_dt_hour" id="end_dt_hour"
+								class="form-control input-ssm">
+									<option value="">${defaultOptionText }</option>
+									<c:set
+										value="${not empty detail.TASK_SEQ ? detail.END_DT_HOUR : '' }"
+										var="SET_HOUR" />
+									<c:forEach var="item" items="${Z_HOUR }">
+										<option value="${item.CODE}"
+											<c:if test="${SET_HOUR == item.CODE}" >selected="selected" </c:if>>${item.NAME}시</option>
+									</c:forEach>
+							</select> <select style="width: 23%" name="end_dt_minute"
+								id="end_dt_minute" class="form-control input-ssm">
+									<option value="">${defaultOptionText }</option>
+									<c:set
+										value="${not empty detail.TASK_SEQ ? detail.END_DT_MINUTE : '' }"
+										var="SET_MINUTE" />
+									<c:forEach var="item" items="${Z_MIN }">
+										<option value="${item.CODE}"
+											<c:if test="${SET_MINUTE == item.CODE}" >selected="selected" </c:if>>${item.NAME}분</option>
+									</c:forEach>
+							</select></td>
+						</tr>
+						<tr>
+							<th>반영예정일자</th>
+							<td><input type="text" name="update_apply_dt_date"
+								id="update_apply_dt_date" class="form-control input-ssm date"
+								style="width: 100px;"
+								value="${not empty detail.TASK_SEQ ? detail.UPDATE_APPLY_DT_DATE : '' }" />
+
+								<select style="width: 23%" name="update_apply_dt_hour"
+								id="update_apply_dt_hour" class="form-control input-ssm">
+									<option value="">${defaultOptionText }</option>
+									<c:set
+										value="${not empty detail.TASK_SEQ ? detail.UPDATE_APPLY_DT_HOUR : '' }"
+										var="SET_HOUR" />
+									<c:forEach var="item" items="${Z_HOUR }">
+										<option value="${item.CODE}"
+											<c:if test="${SET_HOUR == item.CODE}" >selected="selected" </c:if>>${item.NAME}시</option>
+									</c:forEach>
+							</select> <select style="width: 23%" name="update_apply_dt_minute"
+								id="update_apply_dt_minute" class="form-control input-ssm">
+									<option value="">${defaultOptionText }</option>
+									<c:set
+										value="${not empty detail.TASK_SEQ ? detail.UPDATE_APPLY_DT_MINUTE : '' }"
+										var="SET_MINUTE" />
+									<c:forEach var="item" items="${Z_MIN }">
+										<option value="${item.CODE}"
+											<c:if test="${SET_MINUTE == item.CODE}" >selected="selected" </c:if>>${item.NAME}분</option>
+									</c:forEach>
+							</select></td>
+							<th>반영완료일자</th>
+							<td><input type="text" name="update_end_dt_date"
+								id="update_end_dt_date" class="form-control input-ssm date"
+								style="width: 100px;"
+								value="${not empty detail.TASK_SEQ ? detail.UPDATE_END_DT_DATE : '' }" />
+
+								<select style="width: 23%" name="update_end_dt_hour"
+								id="update_end_dt_hour" class="form-control input-ssm">
+									<option value="">${defaultOptionText }</option>
+									<c:set
+										value="${not empty detail.TASK_SEQ ? detail.UPDATE_END_DT_HOUR : '' }"
+										var="SET_HOUR" />
+									<c:forEach var="item" items="${Z_HOUR }">
+										<option value="${item.CODE}"
+											<c:if test="${SET_HOUR == item.CODE}" >selected="selected" </c:if>>${item.NAME}시</option>
+									</c:forEach>
+							</select> <select style="width: 23%" name="update_end_dt_minute"
+								id="update_end_dt_minute" class="form-control input-ssm">
+									<option value="">${defaultOptionText }</option>
+									<c:set
+										value="${not empty detail.TASK_SEQ ? detail.UPDATE_END_DT_MINUTE : '' }"
+										var="SET_MINUTE" />
+									<c:forEach var="item" items="${Z_MIN }">
+										<option value="${item.CODE}"
+											<c:if test="${SET_MINUTE == item.CODE}" >selected="selected" </c:if>>${item.NAME}분</option>
+									</c:forEach>
+							</select> <input type="button" id="button-allDate-set"
+								name="button-allDate-set" class="btn btn-xs" value="일자SET">
+							</td>
+						</tr>
+						<tr>
+							<!--<th>결재진행상황</th>
+							<td><select name="settle_state_cd" id="settle_state_cd"
+								class="form-control input-ssm">
+									<option value="006">완료</option>
+									<c:forEach var="item" items="${Z_15 }">
+										<option value="${item.CODE }"
+											${item.CODE eq detail.SETTLE_STATE_CD ? 'selected=\'selected\'' : '' }>${item.NAME }</option>
+									</c:forEach>
+							</select></td>-->
+							<th>결재자</th>
+							<td>김광진</td>
+							
+							<th>처리자<span style="color: red">*</span></th>
+							<td><select name="proc_admin_no" id="proc_admin_no"
+								class="form-control input-ssm" onchange="setAdminNo();">
+									<option value="">${defaultOptionText }</option>
+									<c:forEach var="li" items="${Z_14}">
+										<option value="${li.CODE}"
+											${li.CODE eq detail.PROC_ADMIN_NO ? 'selected=\'selected\'' : '' }>${li.NAME}</option>
+									</c:forEach>
+							</select> <input type="hidden" name="proc_admin_no_ori"
+								value="${detail.PROC_ADMIN_NO }" /></td>
+						</tr>
+						<tr>
+							<th>처리내용</th>
+							<td colspan="3"><textarea name="proc_content"
+									id="proc_content" class="form-control input-ssm" rows="6">${detail.PROC_CONTENT }</textarea></td>
+						</tr>
+						<tr>
+							<!--  ## 변경점
+						<th>처리상태</th>
+						<td>
+							<select name="proc_state_cd" id="proc_state_cd" class="form-control input-ssm">
+								<option value="">${defaultOptionText }</option>
+								<c:forEach var="item" items="${Z_924 }">
+									<option value="${item.CODE }" ${item.CODE eq detail.PROC_STATE_CD ? 'selected=\'selected\'' : '' }>${item.NAME }</option>
+								</c:forEach>
+							</select>
+						</td>-->
+								<th>처리상태</th>
+								<td>
+									<select name="proc_state_cd" id="proc_state_cd" class="form-control input-ssm">
+								<option value="">${defaultOptionText }</option>
+								<c:forEach var="item" items="${Z_924 }">
+									<c:if test="${item.CODE =='015' || item.CODE =='001'|| item.CODE =='012'|| item.CODE =='003'
+									|| item.CODE =='004'|| item.CODE =='013'|| item.CODE =='009'}">
+										<option value="${item.CODE }" ${item.CODE eq detail.PROC_STATE_CD ? 'selected=\'selected\'' : '' }>${item.NAME }</option>
+									</c:if>
+								</c:forEach>
+							</select>
+							</td>
+						<th>업무처리구분</th>
+							<td colspan="3"><select name="range_cd" id="range_cd"
+								class="form-control input-ssm" style="width: 40%">
+									<option value="">선택</option>
+									<c:forEach var="item" items="${Z_929 }">
+										<c:if test="${item.CODE =='013' || item.CODE =='014'}">
+											<option value="${item.CODE }"
+												${item.CODE eq detail.RANGE_CD ? 'selected=\'selected\'' : '' }>${item.NAME }</option>
+										</c:if>
+									</c:forEach>
+							</select></td>
+						</tr>
+				</table>
+
+				<br>
+			</c:if>
+
+			<!-- 테스트용 ss_user.role_cd != '09' => 정보지워부만  
+                ##  && !foresys -->
+                <c:if test="${registration }">
+                	<!-- 접수일자 -->
+                	<input type="hidden" name="rcpt_dt_date" id="rcpt_dt_date" value="${detail.RCPT_DT_DATE}" />
+					<input type="hidden" name="rcpt_dt_hour" id="rcpt_dt_hour" value="${detail.RCPT_DT_HOUR}" />
+					<input type="hidden" name="rcpt_dt_minute" id="rcpt_dt_minute" value="${detail.RCPT_DT_MINUTE}" />
+					
+					<!-- 개발완료가능일자 -->
+					<input type="hidden" name="cplt_psb_dt_date" id="cplt_psb_dt_date" value="${detail.CPLT_PSB_DT_DATE}" />
+					<input type="hidden" name="cplt_psb_dt_hour" id="cplt_psb_dt_hour" value="${detail.CPLT_PSB_DT_HOUR}" />
+					<input type="hidden" name="cplt_psb_dt_minute" id="cplt_psb_dt_minute" value="${detail.CPLT_PSB_DT_MINUTE}" />
+					
+					<!-- 개발시작일자 -->
+					<input type="hidden" name="start_dt_date" id="start_dt_date" value="${detail.START_DT_DATE}" />
+					<input type="hidden" name="start_dt_hour" id="start_dt_hour" value="${detail.START_DT_HOUR}" />
+					<input type="hidden" name="start_dt_minute" id="start_dt_minute" value="${detail.START_DT_MINUTE}" />
+					
+					<!-- 개발완료일자 -->
+					<input type="hidden" name="end_dt_date" id="end_dt_date" value="${detail.END_DT_DATE}" />
+					<input type="hidden" name="end_dt_hour" id="end_dt_hour" value="${detail.END_DT_HOUR}" />
+					<input type="hidden" name="end_dt_minute" id="end_dt_minute" value="${detail.END_DT_MINUTE}" />
+
+					<!-- 반영예정일자 -->
+					<input type="hidden" name="update_apply_dt_date" id="update_apply_dt_date" value="${detail.UPDATE_APPLY_DT_DATE}" />
+					<input type="hidden" name="update_apply_dt_hour" id="update_apply_dt_hour" value="${detail.UPDATE_APPLY_DT_HOUR}" />
+					<input type="hidden" name="update_apply_dt_minute" id="update_apply_dt_minute" value="${detail.UPDATE_APPLY_DT_MINUTE}" />
+					
+					<!-- 반영완료일자 -->
+					<input type="hidden" name="update_end_dt_date" id="update_end_dt_date" value="${detail.UPDATE_END_DT_DATE}" />
+					<input type="hidden" name="update_end_dt_hour" id="update_end_dt_hour" value="${detail.UPDATE_END_DT_HOUR}" />
+					<input type="hidden" name="update_end_dt_minute" id="update_end_dt_minute" value="${detail.UPDATE_END_DT_MINUTE}" />
+                </c:if>
+                
+                
+                
+                
+                <c:if test="${!registration && !information && !foresys }">
+				<!-- ##세부사항 + 정보 지원부 +포이시스  뷰모드 -->
+				<h4>■ 처리사항</h4>
+				<table class="table table-bordered" style="margin-bottom: 0px;">
+				<colgroup>
+					<col width="15%" />
+					<col width="35%" />
+					<col width="15%" />
+					<col width="35%" />
+				</colgroup>
+				<tbody>
+					<tr>
+						<th>접수일자<span style="color:red">*</span></th>
+						<td>
+							<t:fm type="DATIME7" value="${detail.RCPT_DT }"/>
+							<input type="hidden" name="rcpt_dt_date" id="rcpt_dt_date" value="${not empty detail.TASK_SEQ ? detail.RCPT_DT_DATE : '' }" />
+							<input type="hidden" name="rcpt_dt_hour" id="rcpt_dt_hour" value="${not empty detail.TASK_SEQ ? detail.RCPT_DT_HOUR : '' }" />
+							<input type="hidden" name="rcpt_dt_minute" id="rcpt_dt_minute" value="${not empty detail.TASK_SEQ ? detail.RCPT_DT_MINUTE : '' }" />
+						</td>
+						<th>접수자</th>
+						<td>
+							<!-- ${detail.RCPT_ADMIN_NM } -->
+							<c:if test="${detail.RCPT_ADMIN_NO == '99921'}">이재훈</c:if>
+							<c:if test="${detail.RCPT_ADMIN_NO == '99924'}">김법재</c:if>
+							<c:if test="${detail.RCPT_ADMIN_NO == '99927'}">이우철</c:if>
+							<c:if test="${detail.RCPT_ADMIN_NO == '99925'}">정현아</c:if>
+							<c:if test="${detail.RCPT_ADMIN_NO == '202202'}">김법재(은행)</c:if>
+							<c:if test="${detail.RCPT_ADMIN_NO == '201603'}">박지민(은행)</c:if>
+							<input type="hidden" name="rcpt_admin_no" id="rcpt_admin_no" value="${not empty detail.TASK_SEQ ? detail.RCPT_ADMIN_NO : '' }" />
+						</td>
+					</tr>
+					<tr>
+						<th>개발예상기간</th>
+						<td>
+							${detail.APPLY_DCNT}일
+							<input type="hidden" name="apply_dcnt" id="apply_dcnt" value="${not empty detail.TASK_SEQ ? detail.APPLY_DCNT : '' }" />
+						</td>
+						<th>개발완료가능일자</th>
+						<td>
+							<t:fm type="DATIME7" value="${detail.CPLT_PSB_DT }"/>
+							<input type="hidden" name="cplt_psb_dt_date" id="cplt_psb_dt_date" value="${not empty detail.TASK_SEQ ? detail.CPLT_PSB_DT_DATE : '' }" />
+							<input type="hidden" name="cplt_psb_dt_hour" id="cplt_psb_dt_hour" value="${not empty detail.TASK_SEQ ? detail.CPLT_PSB_DT_HOUR : '' }" />
+							<input type="hidden" name="cplt_psb_dt_minute" id="cplt_psb_dt_minute" value="${not empty detail.TASK_SEQ ? detail.CPLT_PSB_DT_MINUTE : '' }" />
+						</td>
+					</tr>
+					<tr>
+						<th>개발시작일자</th>
+						<td>
+							<t:fm type="DATIME7" value="${detail.START_DT }"/>
+							<input type="hidden" name="start_dt_date" id="start_dt_date" value="${not empty detail.TASK_SEQ ? detail.START_DT_DATE : '' }" />
+							<input type="hidden" name="start_dt_hour" id="start_dt_hour" value="${not empty detail.TASK_SEQ ? detail.START_DT_HOUR : '' }" />
+							<input type="hidden" name="start_dt_minute" id="start_dt_minute" value="${not empty detail.TASK_SEQ ? detail.START_DT_MINUTE : '' }" />
+						</td>
+						<th>개발완료일자</th>
+						<td>
+							<t:fm type="DATIME7" value="${detail.END_DT }"/>
+							<input type="hidden" name="end_dt_date" id="end_dt_date" value="${not empty detail.TASK_SEQ ? detail.END_DT_DATE : '' }" />
+							<input type="hidden" name="end_dt_hour" id="end_dt_hour" value="${not empty detail.TASK_SEQ ? detail.END_DT_HOUR : '' }" />
+							<input type="hidden" name="end_dt_minute" id="end_dt_minute" value="${not empty detail.TASK_SEQ ? detail.END_DT_MINUTE : '' }" />
+						</td>
+					</tr>
+					<tr>
+						<th>반영예정일자</th>
+						<td>
+							<t:fm type="DATIME7" value="${detail.UPDATE_APPLY_DT }"/>
+							<input type="hidden" name="update_apply_dt_date" id="update_apply_dt_date" value="${not empty detail.TASK_SEQ ? detail.UPDATE_APPLY_DT_DATE : '' }" />
+							<input type="hidden" name="update_apply_dt_hour" id="update_apply_dt_hour" value="${not empty detail.TASK_SEQ ? detail.UPDATE_APPLY_DT_HOUR : '' }" />
+							<input type="hidden" name="update_apply_dt_minute" id="update_apply_dt_minute" value="${not empty detail.TASK_SEQ ? detail.UPDATE_APPLY_DT_MINUTE : '' }" />
+						</td>
+						<th>반영완료일자</th>
+						<td>
+							<t:fm type="DATIME7" value="${detail.UPDATE_END_DT }"/>
+							<input type="hidden" name="update_end_dt_date" id="update_end_dt_date" value="${not empty detail.TASK_SEQ ? detail.UPDATE_END_DT_DATE : '' }" />
+							<input type="hidden" name="update_end_dt_hour" id="update_end_dt_hour" value="${not empty detail.TASK_SEQ ? detail.UPDATE_END_DT_HOUR : '' }" />
+							<input type="hidden" name="update_end_dt_minute" id="update_end_dt_minute" value="${not empty detail.TASK_SEQ ? detail.UPDATE_END_DT_MINUTE : '' }" />
+						</td>
+					</tr>
+					<tr>
+						<th>처리내용</th>
+						<td colspan="3"><textarea name="proc_content" id="proc_content" class="form-control input-ssm" rows="6" readonly>${detail.PROC_CONTENT }</textarea></td>
+					</tr>
+					<tr>
+						<th>처리상태<span style="color:red">*</span></th>
+						<td>
+							${detail.PROC_STATE_NM }
+						</td>
+						<th>처리자<span style="color:red">*</span></th>
+						<td>
+							<!-- ${detail.PROC_ADMIN_NM } -->
+							<c:if test="${detail.PROC_ADMIN_NO == '99921'}">이재훈</c:if>
+							<c:if test="${detail.PROC_ADMIN_NO == '99924'}">김법재</c:if>
+							<c:if test="${detail.PROC_ADMIN_NO == '99927'}">이우철</c:if>
+							<c:if test="${detail.PROC_ADMIN_NO == '99925'}">정현아</c:if>
+							<c:if test="${detail.RCPT_ADMIN_NO == '202202'}">김법재(은행)</c:if>
+							<c:if test="${detail.RCPT_ADMIN_NO == '201603'}">박지민(은행)</c:if>
+							<input type="hidden" name="proc_admin_no" id="proc_admin_no" value="${not empty detail.TASK_SEQ ? detail.PROC_ADMIN_NO : '' }" />
+						</td>
+					</tr>
+					<tr>
+						<th>업무처리구분</th>
+						<td colspan="3">
+							${detail.RANGE_NM }
+							<input type="hidden" name="range_cd" id="range_cd" value="${not empty detail.TASK_SEQ ? detail.RANGE_CD : '' }" />
+						</td>
+					</tr>
+				</table>
+				
+				</c:if>
+				
+                
+                <div style="width:98%;">
+                	<div style="width:50%; float:left;"><h4>■ 첨부파일</h4></div>
+                	<div style="width:50%; float:left; text-align:right;" id="button-delete-file-div"><button type="button" id="button-delete-file" class="btn btn-default">첨부파일 삭제</button></div>                		
+                </div>
+                <table style="width:98%;" class="table table-bordered" id="file_table" style="margin-bottom: 0px;">
+					<colgroup>
+						<col width="5%"></col>
+						<col width="30%"></col>
+						<col width="15%"></col>
+						<col width="20%"></col>
+						<col width="20%"></col>
+						<col width="10%"></col>
+					</colgroup> 
+					<tr>
+						<th style="text-align:center"><input type="checkbox" name="check_all" id="check_all" /></th>
+						<th style="text-align:center">제목</th>
+						<th style="text-align:center">구분항목</th>
+						<th style="text-align:center">등록일시</th>
+						<th style="text-align:center">등록자</th>
+						<th style="text-align:center">파일</th>
+					</tr>
+					<c:if test="${FileView ne '[]'}" >
+					<c:forEach  var="li"  items="${FileView}" varStatus="i">
+					<tr> 		
+						<td align="center">
+							<input type="checkbox" name="file_seq" value="${li.FILE_SEQ}"></input>									
+						</td>
+						<td align="center">${li.FILE_TITLE}</td>
+						<td align="center">${li.FILE_TYPE_NM}</td>
+						<td align="center"><t:fm type="DATE" value="${li.CRE_DT}" /></td>
+						<td align="center">${li.CRE_ID_NM}</td>
+						<!-- <td align="center"><img src="/images/common/doc_link.gif" alt="${li.FILE_SIZE/1024} KB" class="IMG_B" onclick="openImage('${li.SVR_DIR}', '${li.SVR_FILE_NM}', '', '01')"/></td> -->
+						<td align="center"><img src="/images/common/doc_link.gif" alt="${li.FILE_SIZE/1024} KB" class="IMG_B" onclick="openTaskReqPWCheck('${detail.TASK_SEQ }', '${detail.FILE_PWD }', '${li.SVR_DIR}', '${li.SVR_FILE_NM}', '', '01')"/></td>
+					</tr>
+					</c:forEach>
+					</c:if>
+					<c:if test="${FileView eq '[]'}" >
+						<td colspan="6" align="center">첨부파일이 없습니다.<input type="hidden" id="notExists" name="notExists"/></td>								
+					</c:if>							
+				</table>
+				
+					<div style="text-align: center; padding-top: 5px;">
+				<!--
+						<c:if test="${!registration && sessionScope.ss_user.checker!='' }">
+							<button type="button" id="button-HstList" class="btn btn-default">이력보기</button>
+						</c:if>
+				  -->
+						<input type="button" name="button-save-openFile" class="btn btn-default" value="파일첨부" onclick="javascript:openFile('${detail.TASK_SEQ}')">
+						
+						<c:choose>
+							
+							<c:when test="${foresys && (detail.PROC_STATE_CD eq '015' || detail.PROC_STATE_CD0 eq '016')}">
+							
+							</c:when>
+							
+							<c:when test="${detail.TASK_SEQ eq NULL}">
+								<button type="button" id="button-save-detail" class="btn btn-default">등록</button>
+							</c:when>
+							
+							<c:when test="${(detail.TASK_SEQ ne NULL)&&(detail.DEPT_CD==sessionScope.ss_user.dept_cd)&&!detail.PROC_STATE_CD=='019'&&!detail.PROC_STATE_CD=='023'}">
+								<button type="button" id="button-save-detail" class="btn btn-default">수정</button>
+							</c:when>
+							
+						
+							
+						</c:choose>
+						<c:if test="${!registration && information &&(detail.DEPT_CD==sessionScope.ss_user.dept_cd)}">
+							<button type="button" id="button-delete" class="btn btn-default">삭제</button>
+						</c:if>
+						<c:if test="${!registration && ( req || rcpt  || foresys || information)}"><!-- ##foresys 삭제 -->
+							<button type="button" id="button-approve" class="btn btn-default">승인처리</button>
+						</c:if>			
+						<!-- <input type="button" name="button-list" id="button-list" class="btn btn-default" value="목 록" onclick="goList();"> -->
+						<input type="button" name="closebtn" class="btn btn-default" value="닫  기" onclick="javascript:self.close();">
+						
+					</div>
+				
+				
+			
+		</form>
+	</div>
+	
+<script type="text/javascript" src="${pageContext.request.contextPath }/jquery/js/jquery-1.11.2.min.js"></script>
+<script type="text/javascript" src="${pageContext.request.contextPath }/jquery/js/jquery-ui.min.js"></script>
+<script type="text/javascript" src="${pageContext.request.contextPath }/jquery/js/jquery.ui.datepicker-ko.js"></script>
+<script type="text/javascript" src="${pageContext.request.contextPath }/jquery/js/jquery.mask.min.js"></script>
+<script type="text/javascript">
+	$(document).ready(function() {
+		maskForm();
+		$(".date").datepicker();
+		$("#button-save-detail").on("click", taskReqSave);
+		$("#button-save-openFile").on("click", openFile);
+		$("#button-delete").on("click", taskReqDelete);
+		$("#button-approve").on("click", taskReqApprove);
+		$("#button-req-approve").on("click", taskReqApprove);
+		$("#button-rcpt-approve").on("click", taskReqApprove);
+		$("#button-HstList").on("click", taskReqHstList);		
+		$("#button_req_change").on("click", taskReqChange);
+		$("#button_req_rcpt").on("click", taskReqRcpt);//요청승인완료 => 접수승인완료
+		$("#button-delete-file").on("click", deleteFile);
+		$("#button-date-set").on("click", dateSet);
+		$("#button-testdate-set").on("click", testDateSet);
+		$("#button-allDate-set").on("click", AllDateSet);
+		$("#button-req-set").on("click", taskReqSet);	//IT팀에서 사전요청->요청 처리.
+		$("#button-test-set").on("click", taskReqSet);	//테스트완료 처리
+		$("#sms_receive_yn").on("click", chkSms);	//SMS수신여부
+
+		// 고객지원요약 데이터 db에서 <br>태그와 함께 가지고옴 <br>태그 삭제하기
+		var textarea = $("#req_content").val();
+		textarea = textarea.replace(/<BR>/ig,"\n");
+		$("#req_content").val(textarea);
+
+			//
+		//$("input[name='process_cd']").change(function(){
+			//$("input[name='process_cd']:checked").val();
+		//});
+	
+		//요청종류 : 자료요청인 경우 비밀번호 입력.
+		chkFilePwd();
+		
+		var TASK_SEQ = "${detail.TASK_SEQ}";
+		if(TASK_SEQ == ""){ // ##신규 등록이면
+			
+			//등록화면 디폴트값
+			/* if($("#sys_cd").val() == ""){
+				$("#sys_cd").val("003");	//003:FILS
+			} */
+			//if($("#proc_state_cd").val() == ""){
+				//$("#proc_state_cd").val("010");	//[Z_924]
+			//}
+			if($("#settle_admin_no").val() == ""){
+				$("#settle_admin_no").val("99921"); //기본
+			}
+			/* if($("#rcpt_cd").val() == ""){
+				$("#rcpt_cd").val("000");	//[Z_927] 000:SYS
+			} */
+			if($("#req_kind").val() == ""){
+				$("#req_kind").val("01");	//[Z_930] 01:업무요청
+			}
+			
+		/* 	if(${sessionScope.ss_user.role_cd} == '09') {
+				if($("#range_cd").val() == ""){
+					$("#range_cd").val("003");	//[Z_929] 003:Prog수정
+				}
+			} else {
+				if($("#range_cd").val() == ""){
+					$("#range_cd").val("000");	//[Z_929] 000:미지정
+				}
+			} */
+			
+		 	/* if(${sessionScope.ss_user.role_cd} == '09') {
+				if($("#req_range_cd").val() == ""){
+					$("#req_range_cd").val("003");	//[Z_929] 003:Prog수정
+				}
+			} else {
+				 if($("#req_range_cd").val() == ""){
+					$("#req_range_cd").val("003");	//[Z_929] 000:미지정
+				}
+			}  */
+		}
+		
+		
+		$("#check_all").click(function() {		
+			if($(this).is(':checked')){
+				$("input[name=file_seq]:checkbox").prop('checked', true);
+			}else{
+				$("input[name=file_seq]:checkbox").prop('checked', false);			
+			}
+		});
+		
+		if($("input[name=notExists]").length > 0){
+			$("#button-delete-file").hide();
+		}
+
+	});
+
+	function taskReqChange(){
+		if($('#proc_state_cd').val()!='017'){
+			alert("요청승인완료 상태에서만 상태변경이 가능합니다.");
+			return proc_state_cd.focus();
+		}
+		var data = $("#userForm").serialize();
+		
+		if(confirm("상태변경하시겠습니까?")){
+			$.ajax({
+				url: "/taskreq/taskReqChange.do",
+				data: data
+				}).done(function() {
+					alert("처리되었습니다.");
+					if (opener && opener.goSearch) {
+						opener.goSearch();
+					}
+				}).fail(failsaveRequireGetNew);
+		}
+	}
+			
+			
+
+	
+	function taskReqApprove() {
+		var checker_role;
+		if($("#req_proc_state_cd").val()=='') {
+			alert("요청승인 처리 상태를 선택해 주세요.");
+					return req_proc_state_cd.focus();
+			}
+		else if($("#rcpt_proc_state_cd").val()=='') {
+			alert("접수승인 처리 상태를 선택해 주세요.");
+			return rcpt_proc_state_cd.focus();
+		}else{
+				if($("#req_proc_state_cd").val()=='017' || $("#req_proc_state_cd").val()=='018' || $("#req_proc_state_cd").val()=='019'){
+					checker_role='1'; //승인 요청
+					
+					}
+				if($("#rcpt_proc_state_cd").val()=='021' || $("#rcpt_proc_state_cd").val()=='022' || $("#rcpt_proc_state_cd").val()=='023'){
+						checker_role='2'; //접수 요청
+						alert($("#req_proc_state_cd").val());
+						}
+			}
+		
+		var data = $("#userForm").serialize();
+    	data+="&checker_role="+checker_role;
+    	
+		if( confirm("승인하시겠습니까?" ) ) {
+	        $.ajax({
+				url: "/taskreq/taskReqApprove.do",
+				type: "post",
+				data: data
+			}).done(function() {
+				alert("처리되었습니다.");
+				if (opener && opener.goSearch) {
+					opener.goSearch();
+				}
+				self.close();
+				
+			}).fail(failsaveRequireGetNew);
+		}
+		
+		}
+
+	function taskReqRcpt() {
+		if($('#proc_state_cd').val()!='017'){
+			alert("요청승인완료 상태에서만 상태변경이 가능합니다.");
+			return it_proc_state_cd.focus();
+		}
+		var data = $("#userForm").serialize();
+		var reqrcpt;
+		if($('#proc_state_cd').val()!='017'){
+			reqrcpt=1;}
+		data+="&reqrcpt="+reqrcpt;
+		if( confirm("접수하시겠습니까?")) {
+	        $.ajax({
+				url: "/taskreq/taskReqRcpt.do",
+				type: "post",
+				data: data
+			}).done(function() {
+				alert("처리되었습니다.");
+				if (opener && opener.goSearch) {
+					opener.goSearch();
+				}
+				self.close();
+			}).fail(failsaveRequireGetNew);
+		}
+		
+		}
+				
+	function taskReqSave() {
+		unmaskForm();
+		//detail은 수정폼에서 사용
+		var task_seq = "${detail.TASK_SEQ}";//데이터가 있으면
+		var role_cd = "${sessionScope.ss_user.role_cd}";//역할코드(세션)
+		
+		// 요청일자
+		var req_dt_date = $("#req_dt_date");
+		var req_dt_hour = $("#req_dt_hour");
+		var req_dt_minute = $("#req_dt_minute");
+		
+		// 접수일자
+		var rcpt_dt_date = $("#rcpt_dt_date");
+		var rcpt_dt_hour = $("#rcpt_dt_hour");
+		var rcpt_dt_minute = $("#rcpt_dt_minute");
+		
+		// 개발완료가능일자
+		var cplt_psb_dt_date = $("#cplt_psb_dt_date");
+		var cplt_psb_dt_hour = $("#cplt_psb_dt_hour");
+		var cplt_psb_dt_minute = $("#cplt_psb_dt_minute");
+		
+		// 개발시작일자
+		var start_dt_date = $("#start_dt_date");
+		var start_dt_hour = $("#start_dt_hour");
+		var start_dt_minute = $("#start_dt_minute");
+		
+		// 개발완료일자
+		var end_dt_date = $("#end_dt_date");
+		var end_dt_hour = $("#end_dt_hour");
+		var end_dt_minute = $("#end_dt_minute");
+		
+		// 반영예정일자
+		var update_apply_dt_date = $("#update_apply_dt_date");
+		var update_apply_dt_hour = $("#update_apply_dt_hour");
+		var update_apply_dt_minute = $("#update_apply_dt_minute");
+			
+		// 반영완료일자
+		var update_end_dt_date = $("#update_end_dt_date");
+	 	var update_end_dt_hour = $("#update_end_dt_hour");
+	 	var update_end_dt_minute = $("#update_end_dt_minute");
+		
+		//일자 반영이 되어 있으면 갑을 저장
+		
+		if(task_seq == '') {
+			var req_kind = $("#req_kind"); //요청 구분 빈값이면 1로 생성 로직이 위에 있음
+			if (req_kind.val() == "") {
+				alert("요청종류를 선택해 주세요.");
+				maskForm();
+				return req_kind.focus();
+			}
+			
+			var req_title = $("#req_title");// 제목이 빈값
+			if (req_title.val() == "") {
+				alert("요청사항 제목을  입력해주세요.");
+				maskForm();
+				return req_title.focus();
+			}
+			
+			var req_content = $("#req_content");// 내용이 빈값
+			if (req_content.val() == "") {
+				alert("요청사항 상세를  입력해주세요.");
+				maskForm();
+				return req_content.focus();
+			}
+			
+			if(role_cd == '09') { 
+				var proc_state_cd = $("#proc_state_cd"); //요청상태 체크
+				if (proc_state_cd.val() == "") {
+					alert("요청상태를 선택해 주세요.");
+					maskForm();
+					return proc_state_cd.focus();
+				}
+			}
+			//var req_range_cd = $("#req_range_cd");
+			//if (req_range_cd.val() == "") {
+			//	alert("요청종류상세룰 선택해 주세요.");
+			//	return req_range_cd.focus();
+			//}
+
+			if(req_kind.val() == '02') { //자료요청 02 , 업뮤요청 01
+				var file_pwd = $("#file_pwd");
+				if (file_pwd.val() == "") {
+					alert("자료요청인 경우 비밀번호를 입력해주세요.");
+					maskForm();
+					return file_pwd.focus();
+				}
+				
+				if(file_pwd.val().length < 4) {
+					alert("비밀번호는 4~6자리 입력해주세요.");
+					maskForm();
+					return file_pwd.focus();
+				}
+			}
+			
+			
+			if(role_cd == '09') { //기존의 요청을 정보지원부가 조회했을때
+				
+				var proc_state_cd = $("#proc_state_cd"); // 처리진행 코드는 체크
+				if (proc_state_cd.val() == "") {
+					alert("처리상태를 선택해 주세요.");
+					maskForm();
+					return proc_state_cd.focus();//ajax를 막는 방법
+				}
+				
+				if(proc_state_cd.val() == "001") { // 요청 일때
+					
+					if(rcpt_dt_date.val() == "") {
+						alert("접수일자를 선택해 주세요.");
+						maskForm();
+						return rcpt_dt_date.focus();
+					}
+					
+					if(rcpt_dt_hour.val() == "") {
+						alert("접수시간을 선택해 주세요.");
+						maskForm();
+						return rcpt_dt_hour.focus();
+					}
+					
+					if(rcpt_dt_minute.val() == "") {
+						alert("접수시간을 선택해 주세요.");
+						maskForm();
+						return rcpt_dt_minute.focus();
+					}
+					
+					var proc_admin_no = $("#proc_admin_no");
+					if (proc_admin_no.val() == "") {
+						alert("처리자를 선택해 주세요.");
+						maskForm();
+						return proc_admin_no.focus();
+					}
+					
+				}
+				
+			}
+			
+			
+		} else {// 상세 조회일때
+			
+			var req_kind = $("#req_kind");
+			if (req_kind.val() == "") {
+				alert("요청종류를 선택해 주세요.");
+				maskForm();
+				return req_kind.focus();
+			}
+			
+			if(req_kind.val() == '02') {
+				var file_pwd = $("#file_pwd");
+				if (file_pwd.val() == "") {
+					alert("자료요청인 경우 비밀번호를 입력해주세요.");
+					maskForm();
+					return file_pwd.focus();
+				}
+			}
+			
+			if(role_cd == '09') {//상세조회인데 정보지원부
+				 var proc_state_cd = $("#proc_state_cd");
+				 
+				// 사전요청 , 보류 , 제외건이 아닌경우
+				if (proc_state_cd.val() != "010" && proc_state_cd.val() != "003" && proc_state_cd.val() != "004"){
+						
+					 if(rcpt_dt_date.val() == "") {
+							alert("접수일자를 선택해 주세요.");
+							maskForm();
+							return rcpt_dt_date.focus();
+						}
+						
+						if(rcpt_dt_hour.val() == "") {
+							alert("접수시간을 선택해 주세요.");
+							maskForm();
+							return rcpt_dt_hour.focus();
+						}
+						
+						if(rcpt_dt_minute.val() == "") {
+							alert("접수시간을 선택해 주세요.");
+							maskForm();
+							return rcpt_dt_minute.focus();
+						}
+						
+						
+						if (proc_state_cd.val() == "") {
+							alert("처리상태를 선택해 주세요.");
+							maskForm();
+							return proc_state_cd.focus();
+						}
+						
+						var proc_admin_no = $("#proc_admin_no");
+						if (proc_admin_no.val() == "") {
+							alert("처리자를 선택해 주세요.");
+							maskForm();
+							return proc_admin_no.focus();
+						}
+						var settle_state_cd = $("#settle_state_cd");
+						if (settle_state_cd.val() == "") {
+							alert("결재진행상태를 선택해 주세요.");
+							maskForm();
+							return settle_state_cd.focus();
+						}
+						var range_cd = $("#range_cd");
+						if (range_cd.val() == "") {
+							alert("업무처리구분을 선택해 주세요.");
+							return range_cd.focus();
+						}
+				 }else{
+						
+					    var proc_admin_no = $("#proc_admin_no");
+						if (proc_admin_no.val() == "") {
+							alert("처리자를 선택해 주세요.");
+							maskForm();
+							return proc_admin_no.focus();
+						}
+					 
+				 }
+				
+			}
+			
+		}
+		
+		// 사전요청 , 보류 , 제외건이 아닌경우
+		//if (proc_state_cd.val() != "010" && proc_state_cd.val() != "003" && proc_state_cd.val() != "004"){
+			var proc_state_cd = $("#proc_state_cd option:selected");
+			
+			var company_cd = $("#company_cd").val();
+			
+			
+			//  날짜 취합 (시초값 셋팅)
+			$("#req_dt").val(req_dt_date.val() + req_dt_hour.val() + req_dt_minute.val());
+			$("#rcpt_dt").val(rcpt_dt_date.val() + rcpt_dt_hour.val() + rcpt_dt_minute.val());
+			$("#start_dt").val(start_dt_date.val() + start_dt_hour.val() + start_dt_minute.val());
+			$("#end_dt").val(end_dt_date.val() + end_dt_hour.val() + end_dt_minute.val());
+			$("#cplt_psb_dt").val(cplt_psb_dt_date.val() + cplt_psb_dt_hour.val() + cplt_psb_dt_minute.val());
+			$("#update_apply_dt").val(update_apply_dt_date.val() + update_apply_dt_hour.val() + update_apply_dt_minute.val());
+			$("#update_end_dt").val(update_end_dt_date.val() + update_end_dt_hour.val() + update_end_dt_minute.val());
+			
+			//alert("1>"+$("#req_dt").val());
+			//alert("1>"+$("#rcpt_dt").val());
+			
+			// 년월일 입력시 디폴트 시분초 셋팅
+			if(req_dt_date.val()=="" && req_dt_hour.val()=="" && req_dt_minute.val()=="") {
+				defaultSet(req_dt_date,${DATE});
+				defaultSet(req_dt_hour,${HOUR});
+				defaultSet(req_dt_minute,"00");
+				$("#req_dt").val(req_dt_date.val() + req_dt_hour.val() + req_dt_minute.val() + "00");
+			}
+			
+			if(!cplt_psb_dt_date.val()=="" && cplt_psb_dt_hour.val()=="" && cplt_psb_dt_minute.val()=="") {
+				defaultSet(cplt_psb_dt_hour,"18");
+				defaultSet(cplt_psb_dt_minute,"00");
+				$("#cplt_psb_dt").val(cplt_psb_dt_date.val() + cplt_psb_dt_hour.val() + cplt_psb_dt_minute.val() + "00");
+			}
+			
+			if(!start_dt_date.val()=="" && start_dt_hour.val()=="" && start_dt_minute.val()=="") {
+				defaultSet(start_dt_hour,${HOUR});
+				defaultSet(start_dt_minute,"00");
+				$("#start_dt").val(start_dt_date.val() + start_dt_hour.val() + start_dt_minute.val() + "00");
+			}
+			
+			if(!end_dt_date.val()=="" && end_dt_hour.val()=="" && end_dt_minute.val()=="") {
+				defaultSet(end_dt_hour,"18");
+				defaultSet(end_dt_minute,"00");
+				$("#end_dt").val(end_dt_date.val() + end_dt_hour.val() + end_dt_minute.val() + "00");
+			}
+			
+			if(!update_apply_dt_date.val()=="" && update_apply_dt_hour.val()=="" && update_apply_dt_minute.val()=="") {
+				defaultSet(update_apply_dt_hour,"18");
+				defaultSet(update_apply_dt_minute,"00");
+				$("#update_apply_dt").val(update_apply_dt_date.val() + update_apply_dt_hour.val() + update_apply_dt_minute.val() + "00");
+			}
+			
+			if(!update_end_dt_date.val()=="" && update_end_dt_hour.val()=="" && update_end_dt_minute.val()=="") {
+				defaultSet(update_end_dt_hour,"18");
+				defaultSet(update_end_dt_minute,"00");
+				$("#update_end_dt").val(update_end_dt_date.val() + update_end_dt_hour.val() + update_end_dt_minute.val() + "00");
+			}
+			
+			
+			// 개발완료
+			if(proc_state_cd.val() == "012"){
+				/*
+				if(cplt_psb_dt_date.val()=="") {
+					alert("[개발완료]로 처리하실경우 개발완료예정일자를 입력해주세요.");
+					maskForm();
+					return cplt_psb_dt_date.focus();
+				}*/
+				
+				if(start_dt_date.val()=="") {
+					alert("[개발완료]로 처리하실경우 개발시작일자를 입력해주세요.");
+					maskForm();
+					return start_dt_date.focus();
+				}
+				
+				if(end_dt_date.val()=="") {
+					alert("[개발완료]로 처리하실경우 개발완료일자를 입력해주세요.");
+					maskForm();
+					return end_dt_date.focus();
+				}
+				
+				if($("#end_dt_date").val() != ""){
+					if($("#start_dt_date").val() > $("#end_dt_date").val()){
+						alert("개발완료일자가 개발시작일자 보다 더 이후 여야 합니다.");
+						maskForm();
+						return end_dt_date.focus();
+					}
+				}
+				
+			}
+			
+			// 완료
+			if(proc_state_cd.val() == "009"){
+				
+				if(update_end_dt_date.val()=="") {
+					alert("[완료]로 처리하실경우 반영완료일자를 입력해주세요.");
+					maskForm();
+					return update_end_dt_date.focus();
+				} else {
+					if(start_dt_date.val()=="") {
+						alert("개발시작일자를 입력해주세요.");
+						maskForm();
+						return start_dt_date.focus();
+					}
+					
+					if(end_dt_date.val()=="") {
+						alert("개발완료일자를 입력해주세요.");
+						maskForm();
+						return end_dt_date.focus();
+					}
+					
+					if(update_apply_dt_date.val()=="") {
+						alert("반영예정일자를 입력해주세요.");
+						maskForm();
+						return update_apply_dt_date.focus();
+					}
+				}
+			}
+			
+			if($("#rcpt_dt").val() != "" && $("#end_dt").val() != ""){
+				if($("#rcpt_dt").val() > $("#end_dt").val()){
+					alert("개발완료일자가 접수일자 보다 더 이후 여야 합니다.");
+					maskForm();
+					return end_dt_date.focus();
+				}
+			}
+			if($("#rcpt_dt").val() != "" && $("#update_end_dt").val() != ""){
+				if($("#rcpt_dt").val() > $("#update_end_dt").val()){
+					alert("반영완료일자가 접수일자 보다 더 이후 여야 합니다.");
+					maskForm();
+					return update_end_dt_date.focus();
+				}
+			}
+			if($("#rcpt_dt").val() != "" && $("#cplt_psb_dt").val() != ""){
+				if($("#rcpt_dt").val() > $("#cplt_psb_dt").val()){
+					alert("개발완료가능일자가 접수일자 보다 더 이후 여야 합니다.");
+					maskForm();
+					return cplt_psb_dt_date.focus();
+				}
+			}
+			if($("#rcpt_dt").val() != "" && $("#update_apply_dt").val() != ""){
+				if($("#rcpt_dt").val() > $("#update_apply_dt").val()){
+					alert("반영예정일자가 접수일자 보다 더 이후 여야 합니다.");
+					maskForm();
+					return update_apply_dt_date.focus();
+				}
+			}
+			
+			
+			// 최종 날짜 취합
+			if(req_dt_date.val() != "" && req_dt_hour.val() != "" && req_dt_minute.val() != ""){
+				$("#req_dt").val(req_dt_date.val() + req_dt_hour.val() + req_dt_minute.val() + "00");
+			}
+			
+			if(rcpt_dt_date.val() != "" && rcpt_dt_hour.val() != "" && rcpt_dt_minute.val() != ""){
+				$("#rcpt_dt").val(rcpt_dt_date.val() + rcpt_dt_hour.val() + rcpt_dt_minute.val() + "00");
+			}
+			
+			if(start_dt_date.val() != "" && start_dt_hour.val() != "" && start_dt_minute.val() != ""){
+				$("#start_dt").val(start_dt_date.val() + start_dt_hour.val() + start_dt_minute.val() + "00");
+			}
+			
+			if(end_dt_date.val() != "" && end_dt_hour.val() != "" && end_dt_minute.val() != ""){
+				$("#end_dt").val(end_dt_date.val() + end_dt_hour.val() + end_dt_minute.val() + "00");
+			}
+			
+			if(cplt_psb_dt_date.val() != "" && cplt_psb_dt_hour.val() != "" &&cplt_psb_dt_minute.val() != ""){
+				$("#cplt_psb_dt").val(cplt_psb_dt_date.val() + cplt_psb_dt_hour.val() + cplt_psb_dt_minute.val() + "00");
+			}
+			
+			if(update_apply_dt_date.val() != "" && update_apply_dt_hour.val() != "" && update_apply_dt_minute.val() != ""){
+				$("#update_apply_dt").val(update_apply_dt_date.val() + update_apply_dt_hour.val() + update_apply_dt_minute.val() + "00");
+			}
+			
+			if(update_end_dt_date.val() != "" && update_end_dt_hour.val() != "" && update_end_dt_minute.val() != ""){
+				$("#update_end_dt").val(update_end_dt_date.val() + update_end_dt_hour.val() + update_end_dt_minute.val() + "00");
+			}
+		///}
+
+		var msg = "";
+		if($("#task_seq").val()==""){
+			msg = "저장";
+		}else{
+			msg = "수정";
+		}
+			
+		var data = $("#userForm").serialize();
+			
+		maskForm();
+		
+		// 전산팀 요청상태 초기화
+		$("#it_proc_state_cd").val("");
+		
+	   	if( confirm( msg + "하시겠습니까?") ) {
+	        $.ajax({
+				url: "/taskreq/taskReqProc.do",
+				type: "post",
+				data: data
+			}).done(function() {
+				alert( msg + "되었습니다.");
+				
+				//location.href='/taskreq/taskReqList.do';
+				
+				if (opener && opener.goSearch) {
+					opener.goSearch();
+				}
+				self.close();
+			
+			}).fail(failsaveRequireGetNew);
+		}
+	}
+	
+	//삭제
+	function taskReqDelete() {
+		var data = $("#userForm").serialize();
+		if( confirm( "삭제하시겠습니까?" ) ) {
+	        $.ajax({
+				url: "/taskreq/taskReqDelete.do",
+				type: "post",
+				data: data
+			}).done(function() {
+				alert("삭제되었습니다.");
+				
+				//location.href='/taskreq/taskReqList.do';
+				
+				if (opener && opener.goSearch) {
+					opener.goSearch();
+				}
+				self.close();
+				
+			}).fail(failsaveRequireGetNew);
+		} 
+	}
+	
+	function taskReqSet() {
+		
+		
+		unmaskForm();
+		
+		var val = $("#button-req-set").val();
+		var proc_state_cd = $("#proc_state_cd").val();
+		/*
+		if(val == '요청처리') {
+			$("#proc_gubun").val('1');
+			
+			// 처리사항 상태값 초기화
+			$("#proc_state_cd").val("");
+			
+			//요청인경우
+			if(proc_state_cd ="000"){
+				// 전산팀 즉시처리
+				var direct_check_yn = $("input:checkbox[id='direct_check_box']").is(":checked");
+				
+				if(direct_check_yn == true){
+					direct_check_yn ="Y";
+				}else{
+					direct_check_yn ="N";
+				}
+				$("#direct_check_yn").val(direct_check_yn);
+			}
+			
+		}*/
+		if(val == '테스트완료처리') {
+			$("#proc_gubun").val('2');
+			$("#proc_state_cd").val('013');
+			
+			// 테스트완료일자
+			var test_end_dt_date = $("#test_end_dt_date");
+			var test_end_dt_hour = $("#test_end_dt_hour");
+			var test_end_dt_minute = $("#test_end_dt_minute");
+			
+			if(test_end_dt_date.val() == '') {
+				alert("테스트완료일자를 선택하세요.");
+				maskForm();
+				return test_end_dt_date.focus();
+			}
+			
+			//  날짜 취합 (시초값 셋팅)
+			$("#test_end_dt").val(test_end_dt_date.val() + test_end_dt_hour.val() + test_end_dt_minute.val() + "00");
+			
+			//alert($("#start_dt").val());
+			
+			if($("#test_end_dt").val() != ""){
+				if($("#start_dt").val() > $("#test_end_dt").val()){
+					alert("테스트완료일자는 개발시작일자 보다 더 이후 여야 합니다.");
+					maskForm();
+					return test_end_dt_date.focus();
+				}
+			}
+		}
+
+		var data = $("#userForm").serialize();
+
+		if( confirm( val+" 하시겠습니까?" ) ) {
+	        $.ajax({
+				url: "/taskreq/taskReqSet.do",
+				type: "post",
+				data: data
+			}).done(function() {
+				alert("처리되었습니다.");
+				
+				//location.href='/taskreq/taskReqList.do';
+				
+				if (opener && opener.goSearch) {
+					opener.goSearch();
+				}
+				self.close();
+				
+			}).fail(failsaveRequireGetNew);
+		}
+	}
+	
+	//첨부파일 팝업
+	function openFile(seq){
+		s_width = 600 ;
+		s_height= screen.height;
+		s_height= s_height - 480;
+		
+		var frm = document.userForm;
+		var req_kind = $("#req_kind").val();
+		
+		if($("#req_kind").val() == '') {
+			alert("요청종류를 선택하세요.");
+			return $("#req_kind").focus();
+		}
+
+		window.open("/loanAppFileViewNew.do?task_seq="+seq+"&req_kind="+req_kind+"&channel=new"
+					, "FileView"+ seq
+					, "width="+s_width+",height="+s_height+", toolbar=0, status=no, top=0, left=0, resizable=yes, scrollbars=yes");
+	}
+	
+	//첨부문서 열기
+	function openImage(dir, file, uri, type){
+		var url = "";
+		var params = "";
+		
+		if(type == '01'){
+			params = "?dir="+dir+"&file="+file;
+			url = "/common/ViewImageNew.jsp"+params;
+		} else {
+			url = uri;
+		}
+		//var url = uri;
+
+		s_width = screen.width ;
+		s_height= screen.height ;
+
+		if(s_width > 1024) s_width = 964;
+		else s_width = (screen.width) - 60 ;
+
+		s_height= s_height - 100 ;
+
+		window.open(url
+			, "openImage"
+			, "width="+s_width+",height="+s_height+", toolbar=0, status=0, top=5, left=5, resizable=1, scrollbars=1"
+		);
+		
+		
+		
+	}
+	
+	//이력보기
+	function taskReqHstList() {
+		var frm = document.userForm;
+    
+	    window.open("", "frmHstList", "width=1000,height=665, top=0,left=0, toolbar=no,location=no,status=no,menubar=no,resizable=no,scrollbars=yes");
+
+	    frm.action = "/taskreq/taskReqHstListPopup.do";    
+	    frm.target = "frmHstList";
+	    frm.method = "post";
+		frm.submit();
+	}
+	
+	
+	function failsaveRequireGetNew() {
+		alert("처리 중 오류가 발생하였습니다.");
+	}
+	
+	function maskForm() {
+		$(".date").mask("0000-00-00");
+	}
+	
+	function unmaskForm() {
+		$(".date").unmask();
+	}
+	
+	//첨부파일 삭제
+	function deleteFile() {		
+		var frm = document.userForm;
+		
+		var cnt = $("input[name=file_seq]:checkbox:checked").length;
+		
+		if(cnt == 0) {
+   			alert("1개 이상의 첨부파일을 선택하세요.");
+   			return;
+       	}
+		
+		if(confirm("첨부파일을 삭제 하시겠습니까?")) {
+			frm.target="ifr_cd";
+			frm.action="/loanAppFileDeleteNew.do";
+			frm.submit();
+		}
+		
+	}
+	
+	//일자셋팅 (테스트완료일자)
+	function testDateSet(){
+		$("#test_end_dt_date").val(${DATE});
+		$("#test_end_dt_hour").val(${HOUR});
+		$("#test_end_dt_minute").val("00");
+		maskForm();
+	}
+	
+	//일자셋팅 (개발완료가능일자)
+	function dateSet(){
+		$("#cplt_psb_dt_date").val(${DATE});
+		$("#cplt_psb_dt_hour").val("19");
+		$("#cplt_psb_dt_minute").val("00");
+		maskForm();
+	}
+	
+	//전체 일자 셋팅
+	function AllDateSet(){
+		
+		var update_end_dt_date = $("#update_end_dt_date").val();
+		var update_end_dt_hour = $("#update_end_dt_hour").val();
+		var update_end_dt_minute = $("#update_end_dt_minute").val();
+		
+		if(update_end_dt_date == '') {
+			return alert("반영완료일자를 선택하세요.");
+		}
+		
+		//개발시작일자
+		$("#start_dt_date").val(update_end_dt_date);
+		$("#start_dt_hour").val(update_end_dt_hour);
+		$("#start_dt_minute").val(update_end_dt_minute);
+		
+		//개발완료일자
+		$("#end_dt_date").val(update_end_dt_date);
+		$("#end_dt_hour").val(update_end_dt_hour);
+		$("#end_dt_minute").val(update_end_dt_minute);
+		
+		//반영예정일자
+		$("#update_apply_dt_date").val(update_end_dt_date);
+		$("#update_apply_dt_hour").val(update_end_dt_hour);
+		$("#update_apply_dt_minute").val(update_end_dt_minute);
+		
+		/*
+		//반영완료일자
+		$("#update_end_dt_date").val(${DATE});
+		$("#update_end_dt_hour").val("18");
+		$("#update_end_dt_minute").val("00");
+		
+		//개발시작일자
+		$("#start_dt_date").val(${DATE});
+		$("#start_dt_hour").val("18");
+		$("#start_dt_minute").val("00");
+		
+		//개발완료일자
+		$("#end_dt_date").val(${DATE});
+		$("#end_dt_hour").val("18");
+		$("#end_dt_minute").val("00");
+		
+		//반영예정일자
+		$("#update_apply_dt_date").val(${DATE});
+		$("#update_apply_dt_hour").val("18");
+		$("#update_apply_dt_minute").val("00");
+		*/
+		
+		maskForm();
+	}
+	
+	//액션 후 reload
+	function goReload(val1,val2,val3,val4,val5,val6,val7,val8,val9){
+		var str = 'align="center"';
+		var val8 = "''";
+		var val9 = "'01'";
+		
+		if($("input[name=notExists]").length > 0){
+			$("#notExists").parent().parent().remove();
+			
+			//$('#button-delete-file-div').append('<button type='+'"button"'+' id='+'"button-delete-file"'+' class='+'"btn btn-default"'+'>첨부파일 삭제</button>');
+			$("#button-delete-file").show();
+		}
+		
+		$('#file_table > tbody:last').append('<tr><td '+str+'><input type="checkbox" name="file_seq" value="'+val1+'" checked></input></td><td '+str+'>'
+				                                       +val2+'</td><td '+str+'>'
+				                                       +val3+'</td><td '+str+'>'
+				                                       +val4+'</td><td '+str+'>'
+				                                       +val5+'</td><td '+str+'><img src="/images/common/doc_link.gif" class="IMG_B" onclick="openImage('
+				                                       +"'"+val6+"'"+','+"'"+val7+"'"+','+val8+','+val9+')"/></td></tr>');
+		
+	}
+	
+	function responseDel(rs){
+		
+		if(rs == "fail"){
+			alert("첨부파일 삭제중 일부 error가 발생하여 페이지 reload 수행합니다.\n 수정중인 edit값은 초기화 됩니다.\n지속적으로 error가 발생하면 관리자에게 문의 하세요.");
+			var frm = document.userForm;
+			frm.target = "_self";
+			frm.action = "/taskreq/taskReqView.do";
+			frm.submit();
+		}
+		
+		$("input[name=file_seq]").each(function() {//입력 확인
+			if($(this).is(':checked')){
+				$(this).parent().parent().remove();
+			}
+		});
+		
+		if($("input[name=file_seq]").length == 0){
+			$("#button-delete-file").hide();
+			$('#file_table > tbody:last').append('<tr><td colspan='+'"6"'+'  align='+'"center"'+' >첨부파일이 없습니다. '+'<input type='+'"hidden"'+' id='+'"notExists"'+' name='+'"notExists"'+'/></td></tr>');
+		}
+		
+	}
+	
+	function reload(){
+		var frm = document.userForm;			
+		frm.target="_self";
+		frm.action="/taskreq/taskReqView.do";
+		frm.submit();
+	}
+	
+	function defaultSet(id,setValue){
+		id.val(setValue);
+	}
+	
+	//개발예상기간
+	$("#apply_dcnt").on("change", function() {
+		
+		var frm = document.userForm;
+		
+		unmaskForm();
+		
+		var start_dt_date = $("#start_dt_date");
+		if(start_dt_date.val() != "") {
+			maskForm();
+			frm.target="ifr_cd";
+			frm.action="/taskreq/getBizDate.do";
+			frm.submit();
+		}
+		
+		/*
+		var data_all = $("#userForm").serialize();
+		
+		maskForm();
+		
+		$.ajax({
+			url: "/taskreq/getBizDate.do",
+			type: "post",
+			data: data_all
+			//data: { "apply_dcnt":$("#apply_dcnt").val(), "start_dt_date":$("#start_dt_date").val() }
+		}).done(function(data) {
+			//alert(data);
+			alert('${data.cplt_psb_dt_date}');
+			//alert( msg + "되었습니다.");
+			//setCpltPsbDt('20170317');
+		}).success(function(data) {
+			alert('12='+data);
+			//alert( msg + "되었습니다..");
+			setCpltPsbDt( data );
+		}).fail(failsaveRequireGetNew);
+		*/
+		
+		
+		
+	});
+	
+	//개발예상기간 및 개발시작일자 에 따라 개발완료가능일자 세팅
+	function setCpltPsbDt( dt ) {
+		$("#cplt_psb_dt_date").val(dt);
+		
+		maskForm();
+	}
+	
+	//테스트완료일자
+	$("#test_end_dt_date").on("change", function() {
+		$("#test_end_dt_hour").val(${HOUR});
+		$("#test_end_dt_minute").val("00");
+	});
+	
+	//접수일자
+	$("#rcpt_dt_date").on("change", function() {
+		$("#rcpt_dt_hour").val(${HOUR});
+		$("#rcpt_dt_minute").val(${MINUTE});
+	});
+	
+	//개발시작일자
+	$("#start_dt_date").on("change", function() {
+		$("#start_dt_hour").val(${HOUR});
+		$("#start_dt_minute").val("00");
+		
+		
+		var apply_dcnt = $("#apply_dcnt");
+		if(apply_dcnt.val() !== "") {
+			var frm = document.userForm;
+			unmaskForm();
+			frm.target="ifr_cd";
+			frm.action="/taskreq/getBizDate.do";
+			frm.submit();
+		}
+		
+		
+	});
+	
+	//개발완료일자
+	$("#end_dt_hour").on("change", function() {	
+		$("#end_dt_minute").val("00");
+	});
+	
+	//반영예정일자
+	$("#update_apply_dt_hour").on("change", function() {	
+		$("#update_apply_dt_minute").val("00");
+	});
+	
+	//반영완료일자
+	$("#update_end_dt_hour").on("change", function() {	
+		$("#update_end_dt_minute").val("00");
+	});
+	
+	
+	//자료요청인 경우 비밀번호 입력
+	function chkFilePwd() {
+		var frm = document.userForm;
+		
+		var req_kind = $("#req_kind").val();
+		//alert(req_kind);
+		if(req_kind == '01') {
+			$("#file_pwd").val("");
+			document.all.divFilePwd1.style.display = "none";
+			document.all.divFilePwd2.style.display = "none";
+		}else if(req_kind == '02') {
+			document.all.divFilePwd1.style.display = "block";
+			document.all.divFilePwd2.style.display = "block";
+		}
+	}
+	
+	//자료요청인 경우 비밀번호 입력 팝업창
+	function openTaskReqPWCheck(task_seq, file_pwd, dir, file, uri, type) {
+
+		//시스템관리자 또는 요청자=로그인자 이면 비밀번호 입력 생략.
+		if(${sessionScope.ss_user.role_cd =='09'} || (${sessionScope.ss_user.member_no} == '${detail.REQ_USER_NO}') ){
+			openImage(dir, file, uri, type);
+		}else{ 
+			var frm = document.userForm;
+			frm.task_seq.value = task_seq;
+			frm.file_pwd.value = file_pwd;
+			frm.dir.value = dir;
+			frm.file.value = file;
+			frm.uri.value = uri;
+			frm.type.value = type;
+			
+			var x;
+		  	var y;
+		 	x = (screen.availWidth-600)/2;
+		  	y = (screen.availHeight-500)/2;
+		   	  
+			window.open("", "taskReqPWCheck", "width=300, height=200 ,left="+x+",top="+y+" , toolbar=0, status=0, resizable=0, scrollbars=0, location=0");
+			
+			frm.action = "/taskreq/taskReqPWCheck.do";
+		    frm.target = "taskReqPWCheck";
+		    frm.method = "post";
+			frm.submit();
+		}
+	}
+	
+	//처리자 선택시 접수자 자동세팅
+	function setAdminNo() {
+		var frm = document.userForm;
+		var rcpt_admin_no = $("#rcpt_admin_no").val();
+		var proc_admin_no = $("#proc_admin_no").val();
+		
+		if(rcpt_admin_no == '' || rcpt_admin_no == null) {
+			$("#rcpt_admin_no").val(proc_admin_no);
+		}
+	}
+	
+	//목록으로
+	function goList() {
+		location.href = "/taskreq/taskReqList.do";
+	}
+	
+	//smsjavascript:viewPage('mnglist/assetloanTotalLoanList.do', 1069)
+	function chkSms() {
+		var frm = document.userForm;
+		var mobile_no = '${sessionScope.ss_user.mobile_no}';
+		//alert(mobile_no);
+		
+		if(frm.sms_receive_yn.checked && (mobile_no == '' || mobile_no == null)) {
+			alert("사용자관리에서 휴대폰번호를 등록하세요.");
+			frm.sms_receive_yn.checked = false;
+			return;
+		}
+		
+		if(frm.sms_receive_yn.checked) frm.sms_receive_yn.value = "Y";
+		else frm.sms_receive_yn.value = "N";
+		
+		//alert(frm.sms_receive_yn.value);
+	}
+	
+</script>	
+<iframe name="ifr_cd" src="" width="0" scrolling="no" height="0" frameborder=0></iframe>
+</body>
+</html>

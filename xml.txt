@@ -1,0 +1,641 @@
+<?xml version="1.0" encoding="EUC-KR"?>
+<!DOCTYPE sqlMap PUBLIC "-//iBATIS.com//DTD SQL Map 2.0//EN" "http://www.ibatis.com/dtd/sql-map-2.dtd">
+
+<!-- 요구사항 -->
+<sqlMap namespace="taskreq">
+    
+    <!-- 검색 조건 -->
+    <sql id="common_where">
+		M.DEL_YN = 'N'
+		<isNotEmpty property="seach_dt_from">
+	            <isEqual property="seach_day" compareValue="req_dt"> AND ( M.REQ_DT <![CDATA[>=]]> #seach_dt_from# ||'000000' AND M.REQ_DT <![CDATA[<=]]> #seach_dt_to#||'999999' ) </isEqual>
+	            <isEqual property="seach_day" compareValue="rcpt_dt"> AND ( M.RCPT_DT <![CDATA[>=]]> #seach_dt_from# ||'000000' AND M.RCPT_DT <![CDATA[<=]]> #seach_dt_to#||'999999' ) </isEqual>
+	            <isEqual property="seach_day" compareValue="update_end_dt"> AND ( M.UPDATE_END_DT <![CDATA[>=]]> #seach_dt_from#||'000000' AND M.UPDATE_END_DT <![CDATA[<=]]> #seach_dt_to#||'999999' ) </isEqual>
+	            <isEqual property="seach_day" compareValue="end_dt"> AND ( M.END_DT <![CDATA[>=]]> #seach_dt_from#||'000000' AND M.END_DT <![CDATA[<=]]> #seach_dt_to# ||'999999') </isEqual>
+	 	</isNotEmpty>
+		
+		<isNotEmpty property="rcpt_admin_no" prepend="AND">			RCPT_ADMIN_NO = #rcpt_admin_no#	</isNotEmpty>
+		
+		<!-- <isNotEmpty property="proc_state_cd" prepend="AND">			PROC_STATE_CD = #proc_state_cd#	</isNotEmpty> -->
+		<isNotNull property="proc_state_cd" prepend="AND">
+			PROC_STATE_CD IN <iterate open="(" conjunction="," close=")" property="proc_state_cd">	#proc_state_cd[]#	</iterate>
+		</isNotNull>
+		
+		<isNotEmpty property="proc_admin_no" prepend="AND">			PROC_ADMIN_NO = #proc_admin_no#	</isNotEmpty>
+		
+		<isNotEmpty property="seach_text">
+				<isEqual property="seach_title" compareValue="req_user_id"> AND M.REQ_USER_NO = #seach_text# </isEqual>
+	            <isEqual property="seach_title" compareValue="req_user_nm"> AND M.REQ_USER_NO IN (SELECT MEMBER_NO FROM TB_FS_AMMEMBER WHERE MEMBER_NM LIKE '%' || #seach_text# || '%') </isEqual>
+	            <isEqual property="seach_title" compareValue="req_title"> AND M.REQ_TITLE LIKE '%' || #seach_text# || '%' </isEqual>
+	            <isEqual property="seach_title" compareValue="req_content"> AND M.REQ_CONTENT LIKE '%' || #seach_text# || '%' </isEqual>
+	            <isEqual property="seach_title" compareValue="proc_content"> AND M.PROC_CONTENT LIKE '%' || #seach_text# || '%' </isEqual>
+	            <isEqual property="seach_title" compareValue="seach_task_seq"> AND M.TASK_SEQ = #seach_text# </isEqual>
+	            <isEqual property="seach_title" compareValue="res_user_nm"> AND M.PROC_ADMIN_NO = (SELECT CODE FROM TB_FS_ZCCODE WHERE CODE_NM LIKE '%'|| #seach_text# ||'%' AND CODEGRP = 'Z14' AND USE_YN = 'Y') </isEqual>
+	     </isNotEmpty>
+	     
+	     <isNotEmpty property="seach_seq" prepend="AND">	 M.TASK_SEQ = #seach_seq#</isNotEmpty>
+	     <isNotEmpty property="req_kind" prepend="AND">	 M.REQ_KIND = #req_kind#</isNotEmpty>
+	     <isNotEmpty property="range_cd" prepend="AND">	 M.RANGE_CD = #range_cd#</isNotEmpty>
+	     
+	     
+	     		<!-- 결재자의 접근은 jsp에서 -->
+  		<isEqual property="tablist2" compareValue="T2" prepend="AND">
+				M.DEPT_CD= #dept_cd#<!-- 요청 승인은 해당 부서만 조회가능  -->
+				AND (M.PROC_STATE_CD='010'OR M.PROC_STATE_CD='017' 
+				OR M.PROC_STATE_CD='018'OR M.PROC_STATE_CD='019')
+		</isEqual>
+		
+		<!-- 결재자의 접근은 + 정보지원부 jsp에서 -->
+	     <isEqual property="tablist3" compareValue="T3" prepend="AND">
+				(M.PROC_STATE_CD='020' OR M.PROC_STATE_CD='021' OR
+				 M.PROC_STATE_CD='022' OR M.PROC_STATE_CD='023')
+		</isEqual>
+		
+    </sql>
+    
+    
+    <sql id="common_select">
+       	  M.TASK_SEQ
+   		, M.REQ_DT
+        , M.RCPT_DT
+        , M.START_DT
+        , M.PROCESS_CD
+        , M.END_DT
+        , M.RCPT_CHECKER_CONTENT
+        , M.REQ_CHECKER_NO
+        , M.RCPT_CHECKER_NO
+        , M.REQ_CHECKER_CONTENT
+        , M.FOR_TEST_YN
+        , M.USED_TM
+        , M.COMPANY_CD
+        , M.SYS_CD
+        , FN_ZCODE_NM('926', M.SYS_CD) SYS_NM		          
+        , M.REQ_TITLE			        
+        , <![CDATA[replace(M.REQ_CONTENT, chr(13)|| chr(10), '<BR>')]]> AS REQ_CONTENT
+        , M.PROC_CONTENT
+        , M.REQ_USER_NO
+        , FN_MEMBER_NM(M.REQ_USER_NO) REQ_USER_NM
+        , M.DEPT_CD
+        , M.BRANCH_CD
+        , M.RCPT_ADMIN_NO
+        , M.PROC_ADMIN_NO
+        , M.SETTLE_ADMIN_NO
+        , M.PROC_STATE_CD                  
+        , M.SETTLE_STATE_CD
+        , M.RCPT_CD
+        , M.RANGE_CD
+        , M.REQ_RANGE_CD
+        , M.REQ_KIND
+        , FN_ZCODE_NM('924', M.PROC_STATE_CD) PROC_STATE_NM
+        , FN_ZCODE_NM('925', M.SETTLE_STATE_CD) SETTLE_STATE_NM
+        , FN_ZCODE_NM('927', M.RCPT_CD) RCPT_NM
+        , FN_ZCODE_NM('929', M.REQ_RANGE_CD) REQ_RANGE_NM
+        , FN_ZCODE_NM('929', M.RANGE_CD) RANGE_NM
+        , FN_ZCODE_NM('930', M.REQ_KIND) REQ_KIND_NM
+        , FN_ZCODE_NM('Z14',M.RCPT_ADMIN_NO) RCPT_ADMIN_NM	
+        , FN_ZCODE_NM('Z14',M.PROC_ADMIN_NO) PROC_ADMIN_NM  
+        , FN_ZCODE_NM('Z14',M.SETTLE_ADMIN_NO) SETTLE_ADMIN_NM  
+        , M.FILE_NM
+        , M.FILE_SIZE
+        , M.DEL_YN
+        , M.CPLT_PSB_DT
+      	, M.IMPT_CD
+        , M.RQM_DCNT
+      	, M.RQM_TM
+      	, M.APPLY_DCNT
+      	, M.TEST_END_DT
+      	, M.UPDATE_APPLY_DT
+      	, M.UPDATE_END_DT
+      	, M.SETTLE_ID
+      	, M.SETTLE_DT
+      	, M.REG_ID
+      	, M.REG_DT
+      	, M.CHG_ID
+      	, M.CHG_DT
+      	, UF_CRYD_NEW(M.FILE_PWD,'REGISTER_NO','TB_SL_TASKREQ') as FILE_PWD
+      	, M.SMS_RECEIVE_YN
+  	    , (SELECT COUNT(P.TASK_SEQ)
+             FROM TB_SL_TASKREQZFILE P
+                , TB_FS_ZFILE F
+            WHERE P.TASK_SEQ = M.TASK_SEQ
+              AND P.FILE_SEQ = F.FILE_SEQ
+              AND F.VIEW_YN = 'Y') AS FILE_CNT
+        , DIRECT_CHECK_YN
+          , (SELECT CODE_NM
+        	 FROM TB_FS_ZCCODE A
+        	 WHERE M.PROC_STATE_CD = A.CODE AND A.CODEGRP='924') AS PROC_STATE_NAME
+        , (SELECT MEMBER_NM
+        	 FROM TB_FS_AMMEMBER A
+        	 WHERE M.REQ_CHECKER_NO = A.MEMBER_NO) AS REQ_CHECKER
+        , (SELECT MEMBER_NM
+        	 FROM TB_FS_AMMEMBER A
+        	 WHERE M.RCPT_CHECKER_NO = A.MEMBER_NO) AS RCPT_CHECKER
+        ,TO_DATE(substr(RCPT_DT,0,8), 'YYYYMMDD') - TO_DATE(substr(REQ_DT,0,8), 'YYYYMMDD') as REQ_RCPT_DAY
+		,TO_DATE(substr(START_DT,0,8), 'YYYYMMDD') - TO_DATE(substr(RCPT_DT,0,8), 'YYYYMMDD') as RCPT_START_DAY
+		,TO_DATE(substr(UPDATE_END_DT,0,8), 'YYYYMMDD') - TO_DATE(substr(START_DT,0,8), 'YYYYMMDD') as START_UPDATE_END_DAY
+		,TO_DATE(substr(UPDATE_END_DT,0,8), 'YYYYMMDD') - TO_DATE(substr(REQ_DT,0,8), 'YYYYMMDD') as REQ_UPDATE_END_DAY
+             
+    </sql>
+    
+    
+    <!-- 요구사항 리스트 -->
+    <select id="taskReqList" parameterClass="hmap" resultClass="hmap">
+        SELECT 
+            *
+        FROM ( 
+            SELECT
+                e.*, 
+                ROWNUM as RNUM
+            FROM (
+                SELECT
+				<include refid="common_select"/>
+				
+				 FROM 
+                    TB_SL_TASKREQ M
+                WHERE 
+             	<include refid="common_where"/>
+             	
+                ORDER BY 
+                	M.REQ_DT DESC, REQ_USER_NM, TASK_SEQ DESC
+             ) e
+            WHERE            
+                ROWNUM <![CDATA[<=]]> #END_ROW#
+        )
+        WHERE
+            RNUM <![CDATA[>=]]> #BEGIN_ROW#
+    </select>
+    
+
+    
+    <!-- 요구사항 리스트 엑셀 -->
+    <select id="taskReqListExcel" parameterClass="hmap" resultClass="hmap">        
+        SELECT
+            e.*, 
+            ROWNUM as RNUM
+        FROM (
+            SELECT
+            <include refid="common_select"/>
+            , <![CDATA[replace(M.REQ_CONTENT, chr(13)|| chr(10), '&nbsp;')]]> AS REQ_CONTENT_EXCEL
+            , <![CDATA[replace(M.REQ_TITLE, chr(13)|| chr(10), '&nbsp;')]]> AS REQ_TITLE_EXCEL
+            
+            FROM 
+                TB_SL_TASKREQ M
+            WHERE 
+             	<include refid="common_where"/>
+             	
+            ORDER BY 
+                M.REQ_DT DESC, REQ_USER_NM, TASK_SEQ DESC
+         ) e           
+    </select>
+    
+    
+    <!-- 요구사항 전체 카운트 정보 -->
+    <select id="taskReqListCount" parameterClass="hmap" resultClass="int">
+        SELECT COUNT(M.TASK_SEQ) AS count
+          FROM TB_SL_TASKREQ M
+      	 WHERE 
+     		<include refid="common_where"/>
+    </select>
+    
+    
+    <!-- 요구사항 상세 정보 -->
+    <select id="taskReqView" parameterClass="hmap" resultClass="hmap">
+        SELECT
+      		<include refid="common_select"/>
+          
+          <!-- 요청일자  -->
+		  , SUBSTR(M.REQ_DT,0,8) AS REQ_DT_DATE
+		  , SUBSTR(M.REQ_DT,9,2) AS REQ_DT_HOUR
+		  , SUBSTR(M.REQ_DT,11,2) AS REQ_DT_MINUTE
+		  
+		  <!-- 접수일자  -->
+	      , SUBSTR(M.RCPT_DT,0,8) AS RCPT_DT_DATE 
+		  , SUBSTR(M.RCPT_DT,9,2) AS RCPT_DT_HOUR 
+		  , SUBSTR(M.RCPT_DT,11,2) AS RCPT_DT_MINUTE
+		  
+		  <!-- 개발시작일자 -->
+		  , SUBSTR(M.START_DT,0,8) AS START_DT_DATE 
+		  , SUBSTR(M.START_DT,9,2) AS START_DT_HOUR 
+		  , SUBSTR(M.START_DT,11,2) AS START_DT_MINUTE
+		  
+		  <!-- 개발완료일자 -->
+          , SUBSTR(M.END_DT,0,8) AS END_DT_DATE 
+		  , SUBSTR(M.END_DT,9,2) AS END_DT_HOUR 
+		  , SUBSTR(M.END_DT,11,2) AS END_DT_MINUTE
+		  
+		  <!-- 개발완료가능일자  -->
+		  , SUBSTR(M.CPLT_PSB_DT,0,8) AS CPLT_PSB_DT_DATE
+	      , SUBSTR(M.CPLT_PSB_DT,9,2) AS CPLT_PSB_DT_HOUR
+	 	  , SUBSTR(M.CPLT_PSB_DT,11,2) AS CPLT_PSB_DT_MINUTE
+	 	  
+	 	  <!-- 테스트완료일자 -->
+	 	  , SUBSTR(M.TEST_END_DT,0,8) AS TEST_END_DT_DATE 
+		  , SUBSTR(M.TEST_END_DT,9,2) AS TEST_END_DT_HOUR 
+		  , SUBSTR(M.TEST_END_DT,11,2) AS TEST_END_DT_MINUTE
+	 	  
+	 	  <!-- 반영예정일자 -->
+		  , SUBSTR(M.UPDATE_APPLY_DT,0,8) AS UPDATE_APPLY_DT_DATE
+		  , SUBSTR(M.UPDATE_APPLY_DT,9,2) AS UPDATE_APPLY_DT_HOUR
+		  , SUBSTR(M.UPDATE_APPLY_DT,11,2) AS UPDATE_APPLY_DT_MINUTE 
+		  
+		  <!-- 반영완료일자 -->
+		  , SUBSTR(M.UPDATE_END_DT,0,8) AS UPDATE_END_DT_DATE
+		  , SUBSTR(M.UPDATE_END_DT,9,2) AS UPDATE_END_DT_HOUR
+		  , SUBSTR(M.UPDATE_END_DT,11,2) AS UPDATE_END_DT_MINUTE 
+        FROM 
+            TB_SL_TASKREQ M
+        WHERE
+        	 M.TASK_SEQ = #task_seq#
+    </select>
+    
+    <!-- 요청상태로 처리 -->
+    <update id="updateTaskReq" parameterClass="hmap">
+        UPDATE 
+            TB_SL_TASKREQ
+        SET 
+             SETTLE_ID = #member_no#
+            , SETTLE_DT = TO_CHAR(sysdate, 'YYYYMMDDHH24MISS')
+            , CHG_ID = #member_no#
+            , CHG_DT = TO_CHAR(sysdate, 'YYYYMMDDHH24MISS')
+            <isNotEmpty property="it_proc_state_cd">	 ,PROC_STATE_CD = #it_proc_state_cd#</isNotEmpty>
+            <isNotEmpty property="proc_state_cd">	 ,PROC_STATE_CD = #proc_state_cd#</isNotEmpty>
+            
+            <isNotEmpty property="direct_check_yn">	 ,DIRECT_CHECK_YN = #direct_check_yn#</isNotEmpty>
+        WHERE
+            TASK_SEQ = #task_seq#
+    </update>
+    
+    
+    <!-- 테스트완료 처리 -->
+    <update id="updateTaskReqTest" parameterClass="hmap">
+        UPDATE 
+            TB_SL_TASKREQ
+        SET 
+            PROC_STATE_CD = #proc_state_cd#
+            , TEST_END_DT = #test_end_dt#
+            , CHG_ID = #member_no#
+            , CHG_DT = TO_CHAR(sysdate, 'YYYYMMDDHH24MISS')
+        WHERE
+            TASK_SEQ = #task_seq#
+    </update>
+    
+    <update id="UpdateState" parameterClass="hmap">
+        UPDATE 
+            TB_SL_TASKREQ
+        SET 
+            RCPT_ADMIN_NO = #rcpt_admin_no#
+            , PROC_ADMIN_NO = #proc_admin_no#
+            , CHG_ID = #chg_id#
+            , CHG_DT = TO_CHAR(sysdate, 'YYYYMMDDHH24MISS')
+            , PROC_STATE_CD = #proc_state_cd#
+            , SETTLE_STATE_CD = #settle_state_cd#
+            
+            <isNotEmpty property="range_cd">	 , RANGE_CD = #range_cd#</isNotEmpty>
+            
+            <isEqual property="direct009_Insert" compareValue="Y"> , RCPT_DT = TO_CHAR(to_date(#update_end_dt#,'YYYYMMDDHH24MISS')-10/24/60, 'YYYYMMDDHH24MISS') </isEqual>
+            <isEqual property="direct009_Insert" compareValue="N"> , RCPT_DT = substr(TO_CHAR(sysdate, 'YYYYMMDDHH24MISS'),0,11)||'000' </isEqual>
+            
+            <isNotEmpty property="update_end_dt">	 ,START_DT = #update_end_dt#</isNotEmpty>
+            <isNotEmpty property="update_end_dt">	 ,END_DT = #update_end_dt#</isNotEmpty>
+            <isNotEmpty property="update_end_dt">	 ,UPDATE_APPLY_DT = #update_end_dt#</isNotEmpty>
+            <isNotEmpty property="update_end_dt">	 ,UPDATE_END_DT = #update_end_dt#</isNotEmpty>
+            
+        WHERE
+            TASK_SEQ = #task_seq#
+    </update>
+    
+    
+    <!-- 요구사항 정보 삭제설정 -->
+    <update id="updateDelYn" parameterClass="hmap">
+        UPDATE 
+            TB_SL_TASKREQ
+        SET 
+            DEL_YN = 'Y'        
+        WHERE
+            TASK_SEQ = #task_seq#
+    </update>
+    
+    <!-- 요구사항 정보 삭제 -->
+    <delete id="taskReqDelete" parameterClass="hmap">
+        DELETE 
+            FROM TB_SL_TASKREQ        
+        WHERE
+            TASK_SEQ = #task_seq#
+    </delete>
+    
+    <!-- 요구사항 정보 이력삭제 -->
+    <delete id="taskReqHstDelete" parameterClass="hmap">
+        DELETE 
+            FROM TB_SL_TASKREQ_HST        
+        WHERE
+            TASK_SEQ = #task_seq#
+    </delete>
+    
+    <!-- 요구사항 정보 첨부파일 삭제 -->
+    <delete id="zfileDelete" parameterClass="hmap">
+		UPDATE TB_FS_ZFILE
+		   SET VIEW_YN = #view_yn#
+		     , CRE_DT = TO_CHAR(sysdate, 'YYYYMMDDHH24MISS')
+			 , CRE_ID = #member_no#
+		 WHERE FILE_SEQ IN (SELECT FILE_SEQ FROM TB_SL_TASKREQZFILE WHERE TASK_SEQ = #task_seq#)
+    </delete>
+        
+    <!-- 요구사항 정보 이력 등록 -->      
+    <insert id="taskReqHstInsert" parameterClass="hmap">
+        <selectKey resultClass="String" keyProperty="hst_seq">
+            SELECT NVL(MAX(TO_NUMBER(HST_SEQ)), 0) + 1 AS hst_seq FROM TB_SL_TASKREQ_HST
+        </selectKey>
+        INSERT INTO TB_SL_TASKREQ_HST
+      	( 
+      		HST_SEQ, HST_REG_TS, TASK_SEQ, REQ_DT, RCPT_DT, START_DT, END_DT
+			, USED_TM, COMPANY_CD, SYS_CD, REQ_TITLE, REQ_CONTENT, PROC_CONTENT
+			, REQ_USER_NO, DEPT_CD, BRANCH_CD, RCPT_ADMIN_NO, PROC_ADMIN_NO
+			, SETTLE_ADMIN_NO, PROC_STATE_CD, SETTLE_STATE_CD, RCPT_CD, RANGE_CD, REQ_KIND , REQ_RANGE_CD
+			, FILE_NM, FILE_SIZE
+			, DEL_YN, CPLT_PSB_DT, IMPT_CD, RQM_DCNT, RQM_TM, APPLY_DCNT
+			, TEST_END_DT, UPDATE_APPLY_DT, UPDATE_END_DT
+			, SETTLE_ID, SETTLE_DT, REG_ID, REG_DT, CHG_ID, CHG_DT
+			, HST_DIV_CD, FILE_PWD, SMS_RECEIVE_YN
+		)
+     	(
+     		SELECT #hst_seq#, SYSTIMESTAMP, TASK_SEQ, REQ_DT, RCPT_DT, START_DT, END_DT
+				 , USED_TM, COMPANY_CD, SYS_CD, REQ_TITLE, REQ_CONTENT, PROC_CONTENT
+				 , REQ_USER_NO, DEPT_CD, BRANCH_CD, RCPT_ADMIN_NO, PROC_ADMIN_NO
+				 , SETTLE_ADMIN_NO, PROC_STATE_CD, SETTLE_STATE_CD, RCPT_CD, RANGE_CD, REQ_KIND , REQ_RANGE_CD
+				 , FILE_NM, FILE_SIZE
+				 , DEL_YN, CPLT_PSB_DT, IMPT_CD, RQM_DCNT, RQM_TM, APPLY_DCNT
+				 , TEST_END_DT, UPDATE_APPLY_DT, UPDATE_END_DT
+				 , SETTLE_ID, SETTLE_DT, REG_ID, REG_DT, CHG_ID, CHG_DT
+				 , #hst_div_cd#, FILE_PWD, SMS_RECEIVE_YN
+    		  FROM TB_SL_TASKREQ
+    		 WHERE TASK_SEQ = #task_seq#
+		)
+    </insert>
+    
+    <!-- 이력 검색 조건 -->
+    <sql id="Hwhere">
+        <dynamic prepend="WHERE">
+            M.TASK_SEQ = #task_seq#
+        </dynamic>
+    </sql>
+    
+    
+    <!-- 요구사항 이력 리스트 -->
+    <select id="taskReqHstList" parameterClass="hmap" resultClass="hmap">
+        SELECT 
+            *
+        FROM ( 
+            SELECT
+                e.*, 
+                ROWNUM as RNUM
+            FROM (
+                SELECT
+				<include refid="common_select"/>
+				, M.HST_SEQ
+	            , to_char(M.HST_REG_TS,'yyyymmddhh24miss') HST_REG_TS
+	            , M.HST_DIV_CD
+	            , FN_ZCODE_NM('931', M.HST_DIV_CD) HST_DIV_NM
+				
+                FROM 
+                    TB_SL_TASKREQ_HST M
+                    
+             	<include refid="Hwhere"/>
+             	
+                ORDER BY 
+                	M.HST_REG_TS DESC
+             ) e
+            WHERE            
+                ROWNUM <![CDATA[<=]]> #END_ROW#
+        )
+        WHERE
+            RNUM <![CDATA[>=]]> #BEGIN_ROW#
+    </select>
+    
+    
+    <!-- 요구사항 이력 전체 카운트 정보 -->
+    <select id="taskReqHstListCount" parameterClass="hmap" resultClass="int">
+        SELECT COUNT(M.HST_SEQ) AS count              
+          FROM TB_SL_TASKREQ_HST M
+        <include refid="Hwhere"/> 
+    </select>
+    
+    
+    <!-- 요구사항 이력 상세 조회 -->
+    <select id="taskReqHstView" parameterClass="hmap" resultClass="hmap">
+        SELECT
+        	<include refid="common_select"/>
+          , M.HST_SEQ
+          , to_char(M.HST_REG_TS,'yyyymmddhh24miss') HST_REG_TS
+          , M.HST_DIV_CD
+          , FN_ZCODE_NM('931', M.HST_DIV_CD) HST_DIV_NM
+        FROM 
+            TB_SL_TASKREQ_HST M
+        WHERE 
+        	M.TASK_SEQ = #task_seq#
+        AND M.HST_SEQ = #hst_seq#
+        ORDER BY 
+            M.HST_REG_TS DESC
+    </select>
+    
+    
+    <insert id="insertFile" parameterClass="hmap">
+      INSERT INTO TB_SL_TASKREQZFILE ( 
+			TASK_SEQ
+			, FILE_SEQ
+		) VALUES (
+			#seq#
+			, #file_seq#
+		)
+    </insert>
+    
+    <select id="FileView" parameterClass="hmap" resultClass="hmap">
+        SELECT
+        	  M.TASK_SEQ
+        	, M.FILE_SEQ
+        	, F.FILE_TITLE
+			, F.FILE_DESC
+			, F.FILE_TYPE
+			, FN_ZCODE_NM('928', F.FILE_TYPE) AS FILE_TYPE_NM
+			, F.ORG_FILE_NM
+			, F.SVR_FILE_NM
+			, F.SVR_DIR
+			, F.FILE_SIZE
+			, F.FILE_EXT
+			, F.VIEW_YN
+			, F.CRE_ID
+			, F.CRE_DT
+			, FN_MEMBER_NM(CRE_ID) AS CRE_ID_NM
+        FROM 
+            TB_SL_TASKREQZFILE M, TB_FS_ZFILE F
+        WHERE 
+        	M.FILE_SEQ = F.FILE_SEQ
+        AND
+        	M.TASK_SEQ = #task_seq#
+        AND F.VIEW_YN = 'Y'
+    </select>
+	
+	<select id="getTaskSeq" resultClass="string">
+		SELECT NVL(MAX(TO_NUMBER(TASK_SEQ)), 0) + 1 AS seq FROM TB_SL_TASKREQ
+	</select>
+	
+	<select id="getBizDate" parameterClass="hmap" resultClass="string">
+   		SELECT uf_BizDate(#apply_dcnt#, #start_dt_date#)
+    	  FROM DUAL
+ 	</select> 
+ 	
+	<update id="taskReqApprove" parameterClass="hmap">
+		UPDATE 
+			TB_SL_TASKREQ 
+		SET 
+			PROC_STATE_CD = #proc_state_cd#
+			<isNotNull property="req_checker" prepend=","> 			REQ_CHECKER 		=	#req_checker# 						</isNotNull>
+			<isNotNull property="req_checker_no" prepend=","> 		REQ_CHECKER_NO 		=	#req_checker_no# 					</isNotNull>
+			<isNotNull property="req_checker_content" prepend=","> 	REQ_CHECKER_CONTENT =	#req_checker_content#				</isNotNull>
+			<isNotNull property="req_checker_dt" prepend=","> 		REQ_CHECKER_DT 		=	TO_CHAR(sysdate, 'YYYYMMDDHH24MISS')</isNotNull>
+		  
+			<isNotNull property="rcpt_checker" prepend=","> 		RCPT_CHECKER 		=	#rcpt_checker# 						</isNotNull>
+			<isNotNull property="rcpt_checker_no" prepend=","> 		RCPT_CHECKER_NO 	=	#rcpt_checker_no# 					</isNotNull>
+			<isNotNull property="rcpt_checker_content" prepend=","> RCPT_CHECKER_CONTENT=	#rcpt_checker_content#				</isNotNull>
+			<isNotNull property="rcpt_checker_dt" prepend=","> 		RCPT_CHECKER_DT 	=	TO_CHAR(sysdate, 'YYYYMMDDHH24MISS')</isNotNull>
+			<isNotNull property="for_test_yn" prepend=","> 			FOR_TEST_YN 		=	#for_test_yn#						</isNotNull>
+		WHERE 
+			TASK_SEQ = #task_seq#
+	</update>
+	
+	<update id="taskReqRcpt" parameterClass="hmap">
+		UPDATE 
+			TB_SL_TASKREQ 
+		SET 
+			<isEqual property="reqrcpt" compareValue="1">PROC_STATE_CD ='020'</isEqual>
+			<isEqual property="reqrcpt" compareValue="2">PROC_STATE_CD ='001'</isEqual>
+			<isEqual property="reqrcpt" compareValue="3">PROC_STATE_CD ='003'</isEqual>
+			<isEqual property="reqrcpt" compareValue="4">PROC_STATE_CD ='015'</isEqual>
+		WHERE 
+			TASK_SEQ = #task_seq#
+	</update>
+	
+	<update id="taskReqChange" parameterClass="hmap">
+		UPDATE 
+			TB_SL_TASKREQ 
+		SET 
+			PROC_STATE_CD ='020'
+		WHERE 
+			TASK_SEQ = #task_seq#
+	</update>
+	
+	<update id="taskReqSave" parameterClass="hmap">
+		MERGE INTO
+			TB_SL_TASKREQ W
+		USING (
+			SELECT #task_seq# AS TASK_SEQ FROM DUAL
+		) P
+		ON (
+			W.TASK_SEQ = P.TASK_SEQ
+		)
+		WHEN NOT MATCHED THEN
+			 INSERT ( 
+		            TASK_SEQ
+                    <isNotNull property="req_dt">, REQ_DT	</isNotNull>
+                    <isNotNull property="rcpt_dt">, RCPT_DT	</isNotNull>
+                    <isNotNull property="start_dt">, START_DT	</isNotNull>
+                    <isNotNull property="end_dt">, END_DT	</isNotNull>
+		            <isNotNull property="company_cd">, COMPANY_CD	</isNotNull>
+		            <isNotNull property="sys_cd">, SYS_CD	</isNotNull>
+		            <isNotNull property="req_title">, REQ_TITLE	</isNotNull>
+		            <isNotNull property="req_content">, REQ_CONTENT	</isNotNull>
+		            <isNotNull property="proc_content">, PROC_CONTENT	</isNotNull>
+		            <isNotNull property="req_user_no">, REQ_USER_NO	</isNotNull>
+		            <isNotNull property="dept_cd">, DEPT_CD	</isNotNull>
+          			<isNotNull property="branch_cd">, BRANCH_CD	</isNotNull>
+		            <isNotNull property="rcpt_admin_no">, RCPT_ADMIN_NO	</isNotNull>
+		            <isNotNull property="proc_admin_no">, PROC_ADMIN_NO	</isNotNull>
+		            <isNotNull property="settle_admin_no">, SETTLE_ADMIN_NO	</isNotNull>
+		            <isNotNull property="proc_state_cd">, PROC_STATE_CD	</isNotNull>
+		            <isNotNull property="settle_state_cd">, SETTLE_STATE_CD	</isNotNull>
+		            <isNotNull property="rcpt_cd">, RCPT_CD	</isNotNull>
+		            <isNotNull property="range_cd">, RANGE_CD	</isNotNull>
+		            <isNotNull property="req_range_cd">, REQ_RANGE_CD	</isNotNull>
+		            <isNotNull property="req_kind">, REQ_KIND	</isNotNull>
+		            <isNotNull property="apply_dcnt">, APPLY_DCNT	</isNotNull>
+		            <isNotNull property="cplt_psb_dt">, CPLT_PSB_DT	</isNotNull>
+		            <isNotNull property="test_end_cd">, TEST_END_DT	</isNotNull>
+		            <isNotNull property="update_apply_dt">, UPDATE_APPLY_DT	</isNotNull>
+		            <isNotNull property="update_end_dt">, UPDATE_END_DT	</isNotNull>
+		            , SMS_RECEIVE_YN
+		            , REG_ID
+		            , REG_DT
+		            <isNotNull property="file_pwd">, FILE_PWD	</isNotNull>
+		            <isNotNull property="process_cd">, PROCESS_CD	</isNotNull>
+		            <isNotNull property="dept_cd">, REQ_DEPT_CD	</isNotNull>
+		       ) VALUES (
+		       		 #task_seq#
+		            <isNotNull property="req_dt">, #req_dt#	</isNotNull>
+		            <isNotNull property="rcpt_dt">, #rcpt_dt#	</isNotNull>
+		            <isNotNull property="start_dt">, #start_dt#	</isNotNull>
+		            <isNotNull property="end_dt">, #end_dt#	</isNotNull>
+		            <isNotNull property="company_cd">, #company_cd#	</isNotNull>
+		            <isNotNull property="sys_cd">, #sys_cd#	</isNotNull>
+		            <isNotNull property="req_title">, #req_title#	</isNotNull>
+		            <isNotNull property="req_content">, #req_content#	</isNotNull>
+		            <isNotNull property="proc_content">, #proc_content#	</isNotNull>
+		            <isNotNull property="req_user_no">, #req_user_no#	</isNotNull>
+		            <isNotNull property="dept_cd">, #dept_cd#	</isNotNull>
+		            <isNotNull property="branch_cd">, #branch_cd#	</isNotNull>
+		            <isNotNull property="rcpt_admin_no">, #rcpt_admin_no#	</isNotNull>
+	            	<isNotNull property="proc_admin_no">, #proc_admin_no#	</isNotNull>
+		            <isNotNull property="settle_admin_no">, #settle_admin_no#	</isNotNull>
+		            <isNotNull property="proc_state_cd">, #proc_state_cd#	</isNotNull>
+		            <isNotNull property="settle_state_cd">, #settle_state_cd#	</isNotNull>
+		            <isNotNull property="rcpt_cd">, #rcpt_cd#	</isNotNull>
+		            <isNotNull property="range_cd">, #range_cd#	</isNotNull>
+		            <isNotNull property="req_range_cd">, #req_range_cd#	</isNotNull>
+		            <isNotNull property="req_kind">, #req_kind#	</isNotNull>
+		            <isNotNull property="apply_dcnt">, #apply_dcnt#	</isNotNull>
+		            <isNotNull property="cplt_psb_dt">, #cplt_psb_dt#	</isNotNull>
+		            <isNotNull property="test_end_cd">, #test_end_cd#	</isNotNull>
+		            <isNotNull property="update_apply_dt">, #update_apply_dt#	</isNotNull>
+		            <isNotNull property="update_end_dt">, #update_end_dt#	</isNotNull>
+		            , #sms_receive_yn#
+		         	, #member_no#
+		            , TO_CHAR(sysdate, 'YYYYMMDDHH24MISS')
+		            <isNotNull property="file_pwd">, uf_crye_new(#file_pwd#,'register_no','TB_SL_TASKREQ')	</isNotNull>
+            	    <isNotNull property="process_cd">, #process_cd#	</isNotNull>
+            		<isNotNull property="dept_cd">, #dept_cd#	</isNotNull>
+            	)
+		WHEN MATCHED THEN
+			UPDATE SET
+				CHG_ID = #member_no#
+				, CHG_DT = TO_CHAR(sysdate, 'YYYYMMDDHH24MISS')
+				<isNotNull property="req_dt" prepend=",">			REQ_DT			=	#req_dt#			</isNotNull>
+				<isNotNull property="rcpt_dt" prepend=",">			RCPT_DT			=	#rcpt_dt#			</isNotNull>
+				<isNotNull property="start_dt" prepend=",">			START_DT		=	#start_dt#			</isNotNull>
+				<isNotNull property="end_dt" prepend=",">			END_DT			=	#end_dt#			</isNotNull>
+				<isNotNull property="company_cd" prepend=",">		COMPANY_CD		=	#company_cd#		</isNotNull>
+				<isNotNull property="sys_cd" prepend=",">			SYS_CD			=	#sys_cd#			</isNotNull>
+				<isNotNull property="req_title" prepend=",">		REQ_TITLE		=	#req_title#			</isNotNull>
+				<isNotNull property="req_content" prepend=",">		REQ_CONTENT		=	#req_content#		</isNotNull>
+				<isNotNull property="proc_content" prepend=",">		PROC_CONTENT	=	#proc_content#		</isNotNull>
+				<isNotNull property="req_user_no" prepend=",">		REQ_USER_NO		=	#req_user_no#		</isNotNull>
+				<isNotNull property="dept_cd" prepend=",">			DEPT_CD			=	#dept_cd#			</isNotNull>
+				<isNotNull property="branch_cd" prepend=",">		BRANCH_CD		=	#branch_cd#			</isNotNull>
+				<isNotNull property="rcpt_admin_no" prepend=",">	RCPT_ADMIN_NO	=	#rcpt_admin_no#		</isNotNull>
+				<isNotNull property="proc_admin_no" prepend=",">	PROC_ADMIN_NO	=	#proc_admin_no#		</isNotNull>
+				<isNotNull property="settle_admin_no" prepend=",">	SETTLE_ADMIN_NO	=	#settle_admin_no#	</isNotNull>
+				<isNotNull property="proc_state_cd" prepend=",">	PROC_STATE_CD	=	#proc_state_cd#		</isNotNull>
+				<isNotNull property="settle_state_cd" prepend=",">	SETTLE_STATE_CD	=	#settle_state_cd#	</isNotNull>
+				<isNotNull property="rcpt_cd" prepend=",">			RCPT_CD			=	#rcpt_cd#			</isNotNull>
+				<isNotNull property="range_cd" prepend=",">			RANGE_CD		= 	#range_cd#			</isNotNull>
+				<isNotNull property="req_range_cd" prepend=",">		REQ_RANGE_CD	= 	#req_range_cd#		</isNotNull>
+				<isNotNull property="req_kind" prepend=",">			REQ_KIND		=	#req_kind#			</isNotNull>
+				<isNotNull property="apply_dcnt" prepend=",">		APPLY_DCNT		= 	#apply_dcnt#		</isNotNull>
+				<isNotNull property="cplt_psb_dt" prepend=",">		CPLT_PSB_DT		=	#cplt_psb_dt#		</isNotNull>
+				<isNotNull property="test_end_cd" prepend=",">		TEST_END_DT		=	#test_end_cd#		</isNotNull>
+				<isNotNull property="update_apply_dt" prepend=",">	UPDATE_APPLY_DT	=	#update_apply_dt#	</isNotNull>
+				<isNotNull property="update_end_dt" prepend=",">	UPDATE_END_DT	=	#update_end_dt#		</isNotNull>
+				<isNotNull property="file_pwd" prepend=",">			FILE_PWD		=	uf_crye_new(#file_pwd#,'register_no','TB_SL_TASKREQ')	</isNotNull>
+				, SMS_RECEIVE_YN = #sms_receive_yn#
+				<isNotNull property="update_end_dt" prepend=",">	PROCESS_CD	=	#process_cd#			</isNotNull>
+				
+	</update>
+	
+</sqlMap>
