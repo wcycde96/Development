@@ -1,0 +1,210 @@
+<%-------------------------------------------------------------
+  - Author(s): 전정우(Jung-Woo ,Jun)
+  - date : 2010. 01. 30
+  - Copyright Notice : (주)포이시스 http://www.foresys.co.kr
+  - @(#) goodsDetail.jsp 1.0
+  - Description : 파일 저장화면
+  - modified : 
+  -------------------------------------------------------------%>
+<%@ page language="java" contentType="text/html; charset=EUC-KR"    pageEncoding="EUC-KR"%>
+<%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
+<%@ taglib prefix="fn" uri="http://java.sun.com/jsp/jstl/functions" %> 
+<%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt"%> 
+<html>
+<head>
+<meta charset="EUC-KR">
+<meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+<title>파일 저장</title>
+<link rel="stylesheet" href="${pageContext.request.contextPath }/bootstrap/css/bootstrap.min.css">
+<link rel="stylesheet" href="${pageContext.request.contextPath }/bootstrap/css/bootstrap.custom.css">
+<link rel="stylesheet" href="${pageContext.request.contextPath }/jquery/css/jquery-ui.min.css">
+<style type="text/css">
+input.link {
+	border-top: 0px;
+	border-left: 0px;
+	border-right: 0px;
+	border-radius: 0px;
+}
+</style>
+
+<script type="text/javascript" src="${pageContext.request.contextPath }/jquery/js/jquery-1.11.2.min.js"></script>
+<script type="text/javascript" src="${pageContext.request.contextPath }/jquery/js/jquery-ui.min.js"></script>
+<script type="text/javascript" src="${pageContext.request.contextPath }/jquery/js/jquery.ui.datepicker-ko.js"></script>
+<script type="text/javascript" src="${pageContext.request.contextPath }/jquery/js/jquery.mask.min.js"></script>
+
+<script type="text/javascript">
+
+	$(document).ready(function() {
+		
+		$("#check_all").click(function() {		
+			if($(this).is(':checked')){
+				$("input[name=file_seq]:checkbox").prop('checked', true);
+			}else{
+				$("input[name=file_seq]:checkbox").prop('checked', false);			
+			}
+		});	
+		
+		$("#button-save").on("click", submitForm);
+		
+		
+	});
+	// 등록
+	function submitForm(){
+		var url;
+		var frm = document.upload_Form;
+		if(frm.file_title.value == '') {
+	    	alert("제목을 입력하세요");
+		  	return frm.file_title.focus();
+	  	}
+	  	if(frm.org_file_nm.value == '') {
+	    	alert("첨부파일을 선택 하세요.");
+		  	return frm.org_file_nm.focus();
+	  	}
+
+	  	
+	  	var file_value = frm.org_file_nm.value;
+	  	var req_kind = '${param.req_kind}';
+
+	  	if(file_value != ""){
+			var index = file_value.lastIndexOf("\\");
+			var org_file_nm = file_value.substring(index + 1);
+			var url_value = "?req_kind="+req_kind+"&org_file_nm="+org_file_nm;
+			
+			url = "/loanAppfileSaveNew.do"+url_value;
+		}else{
+			url = "/loanAppfileSaveNew.do";
+		}
+		
+
+		frm.target = "ifr_cd";
+		frm.action = url;
+		frm.submit();
+	}
+
+	// 확장자 잘라내기
+	function getFileExtension( filePath ){
+    
+	    var lastIndex = -1;
+	    lastIndex = filePath.lastIndexOf('.');
+	    var extension = "";
+	
+		if ( lastIndex != -1 ){
+		    extension = filePath.substring( lastIndex+1, filePath.len );
+		} else {
+		    extension = "";
+		}
+	    return extension;
+	}
+	
+	// 사용가능한 파일 확장자 체크 
+	function uploadImg_Change( value ){
+	    var src = getFileExtension(value);
+	    if (src == "") {
+	        alert('올바른 파일을 입력하세요');
+	        return;
+	    } else if ( !( (src.toLowerCase() == "gif") 	// 이미지파일
+	    			|| (src.toLowerCase() == "jpg") 
+	    			|| (src.toLowerCase() == "jpeg")
+	    			|| (src.toLowerCase() == "tif")
+	    			|| (src.toLowerCase() == "tiff")
+	    			|| (src.toLowerCase() == "bmp")
+	    			|| (src.toLowerCase() == "png")
+	    				    			
+	    			|| (src.toLowerCase() == "hwp")		// 문서파일
+	    			|| (src.toLowerCase() == "doc")
+	    			|| (src.toLowerCase() == "xls")
+	    			|| (src.toLowerCase() == "pdf")
+	    			|| (src.toLowerCase() == "ppt")
+	    			|| (src.toLowerCase() == "txt")
+	    			
+	    		     )  
+	    		  ) 
+	    {
+	        alert('이미지, 문서 파일만 지원합니다.');
+	        upload_Form.reset(); 
+	        return;
+	    }	
+	}
+
+	function result(file_seq, name, path, fileNm){
+		top.close();
+		//opener.document.all.file_tb.innerHTML = opener.document.all.file_tb.innerHTML + upload_Form.org_file_nm.value + "<input type='hidden' name='file_seq' value='"+file_seq+"' /><br>";
+		var val1 = file_seq;
+		var val2 = $("#file_title").val();
+		var val3 = $("#file_type option:selected").text();
+		var val4 = $.datepicker.formatDate('yy-mm-dd', new Date());
+		var val5 = name;
+		var val6 = path;
+		var val7 = fileNm;
+		var val8 = "''";
+		var val9 = "'01'";
+		//alert(val1+"\n"+val2+"\n"+val3+"\n"+val4+"\n"+val5+"\n"+val6+"\n"+val7+"\n"+val8+"\n"+val9);
+		opener.goReload(val1, val2, val3, val4, val5, val6, val7, val8, val9);
+	}
+
+</script>
+
+</head>
+
+<body>
+<!-- 버튼 S -->
+<div style="padding: 8px; width:98%;">
+	<div style="width:100%;">
+		<div style="width:50%; float:left;">
+			<h4>■ 파일등록</h4>
+		</div>
+		<div style="width:50%; float:left; text-align:right;">
+			<button type="button" id="button-save" class="btn btn-default">저 장</button>
+			<button type="button" id="button-close" class="btn btn-default" onclick="self.close();">닫 기</button>
+		</div>	
+	</div>
+
+<!-- 버튼 E -->
+                              
+	<!-- START : 리스트 테이블 -->
+	<form name="upload_Form" method="post" enctype="multipart/form-data">
+	<input type="hidden" name="cre_id" value="${sessionScope.ss_user.member_no}"/>
+	<input type="hidden" name="task_seq" value="${param.task_seq}" />
+	<input type="hidden" name="file_desc" value="" />
+	<input type="hidden" name="view_yn" value="Y">
+	
+	<table class="table table-bordered" style="margin-bottom: 0px;">
+		<colgroup>
+			<col width="20%">
+			<col width="80%">
+		</colgroup>
+		<tbody>
+		    <tr>   
+		    	<th>제목 </th>
+		        <td><input type="text" class="form-control input-ssm date" style="width: 100%;" id="file_title" name="file_title" size="30" maxlength="30"></td>
+			</tr>
+			<tr>   
+		    	<th>구분 항목</th>
+		        <td>
+		        	<select name="file_type" id="file_type" style="width:25%;" class="form-control input-ssm">
+						<c:forEach var="ci" items="${file_type}">
+						<option value="${ci.CODE}">${ci.NAME}</option>
+						</c:forEach>
+					</select>					
+		        </td>
+			</tr>
+			<!--
+			<tr>
+		    	<th>내용</th>
+		        <td>
+		        	<textarea name="file_desc" rows="10" style="width:100%;ime-mode:active" class="form-control input-ssm"></textarea>
+		        </td>
+			</tr>
+			-->
+			<tr height="35">
+		    	<th>첨부파일</th>
+		        <td><input type="file" name="org_file_nm" class="form-control input-ssm" style="width: 100%; height:100%;" dir="ltr" ></td>
+			</tr>	
+	    </tbody>
+</table>
+</form>
+</div>
+<!--본문 테이블 종료 -->
+<iframe name="ifr_cd" src="" width="0" scrolling="no" height="0" frameborder=0></iframe>
+</body>
+</html>

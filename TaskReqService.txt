@@ -1,0 +1,237 @@
+/** 
+ * ==================================================================
+ *
+ * (주)포이시스., Software License, Version 1.0
+ *
+ * Copyright (c) 2010 (주)포이시스.,
+ * 서울 금천구 가산동 371-28 우림라이온스밸리 B동 1412호
+ * All rights reserved. 
+ * 
+ * DON'T COPY OR REDISTRIBUTE THIS SOURCE CODE WITHOUT PERMISSION. 
+ * THIS SOFTWARE IS PROVIDED ''AS IS'' AND ANY EXPRESSED OR IMPLIED 
+ * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES 
+ * OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE 
+ * DISCLAIMED. IN NO EVENT SHALL (주)포이시스 OR ITS 
+ * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, 
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT 
+ * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF 
+ * USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+ * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, \
+ * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT 
+ * OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF 
+ * SUCH DAMAGE. 
+ * ==================================================================== 
+ * 
+ * For more information on this product, please see 
+ * http://www.foresys.co.kr 
+ * 
+ */
+
+/*
+ * @(#)RequireService.java 1.10 2010. 04. 24
+ */
+
+package com.foresys.fsys.taskReq.service;
+
+import java.util.HashMap;
+import java.util.Map;
+
+import javax.servlet.http.HttpServletRequest;
+
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.foresys.fsys.taskReq.dao.TaskReqDAO;
+
+/**
+ * TaskReqService.java
+ * 
+ * @version @(#)TaskReqService.java 1.10 2017.03.07
+ * @author 
+ * @modified
+ */
+  
+public class TaskReqService {
+
+    private static TaskReqDAO taskReqDAO = null;
+
+    public void setTaskReqDAO( TaskReqDAO taskReqDAO ) {
+        this.taskReqDAO = taskReqDAO;
+    }
+
+	/**
+	 * [요구사항 리스트 코드조회]
+	 * 
+	 * @param model
+	 * @throws Exception
+	 */
+    public void taskReqList(Map<String, Object> model) throws Exception {
+    	taskReqDAO.taskReqList(model);
+    }
+    
+    ///@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+    public void taskReqList_test(Map<String, Object> model) throws Exception {
+    	taskReqDAO.taskReqList_test(model);
+    	
+    }
+     
+    ///@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+    
+    /**
+     * [요구사항 리스트 목록조회]
+     * 
+     * @param model
+     * @param param
+     * @throws Exception
+     */
+    public void getTaskReqList(HttpServletRequest req, Map<String, Object> model, HashMap<String, Object> param) throws Exception {
+    	model.putAll(taskReqDAO.getTaskReqList(req,param).getPagedListMap());
+    }
+    
+    /**
+     * [요구사항 등록/수정/상세화면]
+     * 
+     * @param req
+     * @param param
+     * @return
+     * @throws Exception
+     */
+    public Map<String, Object> taskReqView( HttpServletRequest req, Map<String, Object> param ) throws Exception {        
+        return taskReqDAO.taskReqView( req, param );
+    }
+    
+    public Map<String, Object> taskReqCheckerForm( HttpServletRequest req, Map<String, Object> param ) throws Exception {        
+        return taskReqDAO.taskReqCheckerForm( req, param );
+    }
+    
+    public String taskReqCheckerSave( HttpServletRequest req, Map<String, Object> param ) throws Exception {
+        return taskReqDAO.taskReqCheckerSave( req, param );
+    }
+       
+    
+    /**
+     * [요구사항 등록/수정처리]
+     * 
+     * @param req
+     * @param param
+     * @return
+     * @throws Exception
+     */
+    @Transactional(propagation=Propagation.REQUIRED, rollbackFor=Exception.class)
+    public String taskReqProc( HttpServletRequest req, Map<String, Object> param ) throws Exception {
+        return taskReqDAO.taskReqProc( req, param );
+    }
+    
+    /**
+     * [요청 승인/보류/거절]
+     * 
+     * @param req
+     * @param param
+     * @return
+     * @throws Exception
+     */
+    public String taskReqApprove( HttpServletRequest req, Map<String, Object> param ) throws Exception {
+    	return taskReqDAO.taskReqApprove( req, param );
+    }
+    /**
+     * [요청 승인/보류/거절]
+     * 
+     * @param req
+     * @param param
+     * @return
+     * @throws Exception
+     */
+    public String taskReqRcpt( HttpServletRequest req, Map<String, Object> param ) throws Exception {
+    	return taskReqDAO.taskReqRcpt( req, param );
+    }
+    public String taskReqChange( HttpServletRequest req, Map<String, Object> param ) throws Exception {
+    	return taskReqDAO.taskReqChange( req, param );
+    }
+    
+    /**
+     * [요구사항 삭제처리]
+     * 
+     * @param req
+     * @param param
+     * @return
+     * @throws Exception
+     */
+    public String taskReqDelete( HttpServletRequest req, Map<String, Object> param ) throws Exception {
+        return taskReqDAO.taskReqDelete( req, param );
+    }
+    
+    /**
+     * [요구사항 요청처리, 테스트완료처리]
+     * 
+     * @param req
+     * @param param
+     * @return
+     * @throws Exception
+     */
+    public String taskReqSet( HttpServletRequest req, Map<String, Object> param ) throws Exception {
+        return taskReqDAO.taskReqSet( req, param );
+    }
+    public String taskReqListChgState( HttpServletRequest req, Map<String, Object> param ) throws Exception {
+        return taskReqDAO.taskReqListChgState( req, param );
+    }
+      
+    /**
+     * [이력 목록 팝업]
+     * 
+     * @param req
+     * @param param
+     * @return
+     * @throws Exception
+     */ 
+    public Map<String, Object> taskReqHstListPopup( HttpServletRequest req, Map<String, Object> param ) throws Exception {
+        return taskReqDAO.taskReqHstListPopup( req, param );
+    }
+    
+    /**
+     * [이력 목록 조회]
+     * 
+     * @param model
+     * @param param
+     * @throws Exception
+     */
+    public void getTaskReqHstList(Map<String, Object> model, HashMap<String, Object> param) throws Exception {
+    	model.putAll(taskReqDAO.getTaskReqHstList(param).getPagedListMap());
+    }
+    
+    /**
+     * [이력 상세 팝업]
+     * 
+     * @param req
+     * @param param
+     * @return
+     * @throws Exception
+     */ 
+    public Map<String, Object> taskReqHstPopup( HttpServletRequest req, Map<String, Object> param ) throws Exception {
+        return taskReqDAO.taskReqHstPopup( req, param );
+    }
+    
+    /**
+     * [요구사항 리스트 엑셀]
+     * 
+     * @param req
+     * @param param
+     * @return
+     * @throws Exception
+     */
+    public Map<String, Object> taskReqListExcel( HttpServletRequest req, Map<String, Object> param ) throws Exception {
+        return taskReqDAO.taskReqListExcel( req, param );
+    }
+    
+    /**
+     * [개발완료예정일자 구하기]
+     * 
+     * @param req
+     * @param param
+     * @return
+     * @throws Exception
+     */
+    public String getBizDate( HttpServletRequest req, Map<String, Object> param ) throws Exception {
+        return taskReqDAO.getBizDate( req, param );
+    }
+    
+}

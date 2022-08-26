@@ -1,0 +1,485 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE beans PUBLIC "-//SPRING//DTD BEAN//EN"
+    "http://www.springframework.org/dtd/spring-beans.dtd">
+
+<beans>
+	<bean id="localeResolver" class="org.springframework.web.servlet.i18n.SessionLocaleResolver" />
+    <!-- @@test <bean id="multipartResolver" class="org.springframework.web.multipart.commons.CommonsMultipartResolver"/>-->
+	<bean id="viewResolver" class="org.springframework.web.servlet.view.InternalResourceViewResolver">
+		<property name="viewClass">
+			<value>org.springframework.web.servlet.view.JstlView</value>
+		</property>
+		<property name="cache" value="false" />
+		<property name="prefix" value="/WEB-INF/jsp/" />
+		<property name="suffix" value=".jsp" />
+	</bean>
+	
+	<bean id="jsonView" class="net.sf.json.spring.web.servlet.view.JsonView">
+		<property name="contentType" value="application/json;charset=EUC-KR" />
+	</bean>
+	 
+	<bean id="beanNameViewResolver" class="org.springframework.web.servlet.view.BeanNameViewResolver">
+		<property name="order" value="0" />
+	</bean>
+	
+
+	<bean id="urlMapping" class="org.springframework.web.servlet.handler.SimpleUrlHandlerMapping">
+		<property name="order"><value>1</value></property>
+
+        <!-- session -->
+        <property name="interceptors">
+            <list>
+                <ref bean="signonInterceptor"/>
+            </list>
+        </property>
+
+		<property name="mappings">
+			<props>
+				<!-- static view mapping -->
+
+				<!-- 시스템  -->
+				<prop key="/index.do">indexController</prop>
+                <prop key="/menu*.do">menuController</prop>
+                <prop key="/zuniversity*.do">zuniversityController</prop>
+                <prop key="/zcarea*.do">zcareaController</prop>
+                <prop key="/notice_*.do">noticeController</prop>
+                <prop key="/loanApp*.do">fileController</prop>
+                <prop key="/customer_*.do">customerController</prop>
+                <prop key="/Access*.do">accessController</prop>
+                <prop key="/code_mast/*.do">codeMastController</prop>
+				<!-- 대출상담사관리 -->
+                <prop key="/loanAgent*.do">loanAgentController</prop>
+                <prop key="/ajCode/*.do">ajCodeController</prop>
+
+                <!-- 신용평가  -->
+				<prop key="/Method*.do">MethodController</prop>
+				<prop key="/Item*.do">ItemController</prop>
+				<prop key="/SmCondition*.do">SmConditionController</prop>
+				<prop key="/SmItem*.do">SmItemController</prop>
+				
+                <prop key="/IcEvalGrp*.do">IcEvalGrpController</prop>
+				<prop key="/ItemSrc*.do">ItemSrcController</prop>
+				
+				<!-- 자료관리 -->
+				<prop key="/workData/*.do">workDataController</prop>
+				
+				<!-- 기준셋코드/상품코드  -->
+				<prop key="/basiccode*.do">basicCodeController</prop>
+				<prop key="/Goods*.do">goodsController</prop>
+
+				<!-- 신용조회 -->
+				<prop key="/cis/main.do">creditViewController</prop>
+				<prop key="/cis/reload*.do">creditReloadController</prop>
+				<prop key="/credit/CreditNice*.do">creditController</prop>
+				<prop key="/credit/CreditKis*.do">creditKisController</prop>
+				<prop key="/credit/CreditKcb*.do">creditKcbController</prop>
+				<prop key="/credit/CreditGras*.do">creditGrasController</prop>
+				<prop key="/credit/CreditList.do">creditViewController</prop>
+                <prop key="/cert/*.do">certController</prop>
+
+                <!-- css -->
+				<prop key="/css/Item*.do">ItemController</prop>
+				<prop key="/css/Method*.do">MethodController</prop>
+				<prop key="/css/SmItem*.do">SmItemController</prop>
+				<prop key="/css/SmCondition*.do">SmConditionController</prop>
+				<prop key="/css/Score*.do">ScoreController</prop>
+				<prop key="/css/ItemSrc*.do">ItemSrcController</prop>
+				
+				<!-- eval -->
+				<prop key="/eval/Eval*.do">EvaluateController</prop>
+
+				<prop key="/evalass/Eval*.do">EvalController</prop>  <!-- 201406 -->
+				<prop key="/evalview/Eval*.do">EvalViewController</prop>  <!-- 201406 -->
+
+
+				<prop key="/asstest/EvalTest*.do">EvalTestController</prop>  <!-- 201406 -->
+				
+				<prop key="/ass/Mnt*.do">AssMonitController</prop>  <!-- ass monitoring -->
+
+                <!-- 심사 -->
+                <prop key="/mngloan/*.do">mngLoanDetailController</prop>
+                <prop key="/mngloan_gua/*.do">mngLoanGuarantorController</prop>
+                <prop key="/mnglist/*.do">mngLoanListController</prop>
+                <prop key="/mngfile/*.do">mngLoanFileController</prop>
+                <prop key="/assign/*.do">mngLoanAssignController</prop>
+                <prop key="/judge/*.do">mngLoanJudgeController</prop>
+                
+				<!--PL 심사 -->
+                <prop key="/mngloanPl/*.do">mngLoanPlDetailController</prop>
+                <prop key="/mngloanPl_gua/*.do">mngLoanPlGuarantorController</prop>
+                <prop key="/mngPllist/*.do">mngLoanPlListController</prop>
+                <prop key="/mngfilePl/*.do">mngLoanPlFileController</prop>
+                <prop key="/assignPl/*.do">mngLoanPlAssignController</prop>
+                <prop key="/judgePl/*.do">mngLoanPlJudgeController</prop>
+
+				<!-- new MPL 심사 -->
+                <prop key="/newmngloan/*.do">mngLoanNewDetailController</prop>
+                <prop key="/newmngloan_gua/*.do">mngLoanGuarantorController</prop>
+                <prop key="/newmngfile/*.do">mngLoanFileController</prop>
+                <prop key="/newassign/*.do">mngLoanAssignController</prop>
+                <prop key="/newjudge/*.do">mngLoanJudgeController</prop>
+                 
+                <!-- 자동기표 -->
+                <prop key="/fams/ent/auto*.do">autoLoanController</prop>
+                <prop key="/fams/ent/mortAuto*.do">autoLoanMortController</prop>
+                <prop key="/fams/ent/personalAuto*.do">autoLoanPersonalController</prop>
+                <prop key="/fams/ent/carAuto*.do">autoLoanCarController</prop>
+				<prop key="/fams/ent/plAuto*.do">autoLoanPlController</prop>
+				<prop key="/fams/ent/drctcarAuto*.do">autoLoanDrctcarController</prop>
+				<prop key="/fams/ent/juniorCarAuto*.do">autoLoanJuniorCarController</prop>
+                <prop key="/fams/ent/newAuto*.do">autoLoanNewController</prop>
+	            <prop key="/fams/ent/saiAuto*.do">autoLoanSaiController</prop>
+	            <prop key="/fams/ent/IFIS*.do">autoLoanNewController</prop>
+	            <prop key="/fams/ent/sunshineAuto*.do">autoLoanSunshineController</prop>
+	
+				<!-- 우편물 DM 중앙회  -->
+	 			<prop key="/fams/ifis/dmpost/*.do">ifisDmPostController</prop>
+	
+                <!-- IFIS 연동  -->
+                <prop key="/cust/ifis*.do">IFISOnlineController</prop>
+				<prop key="/fams/ifis/*.do">IFISOnlineController</prop>
+				<prop key="/ifis/IF*.do">IFISController</prop>
+                <!-- flex -->
+                <prop key="/flexExcel*.do">famsFlexController</prop>
+
+                <!-- TEWS  -->
+                <prop key="/fams/tews/tews*.do">tewsController</prop>
+
+                <!-- fams 관리팀  -->
+                <prop key="/manageTeam*.do">teamMngController</prop>
+
+                <!-- email / sms -->
+                <prop key="/email*.do">emailController</prop>
+                <prop key="/sms*.do">smsController</prop>
+                <prop key="/dm/dm*.do">dmController</prop>
+
+                <!--  고객상담 -->
+				<prop key="/cust/frm*.do">custFrameController</prop>
+				<prop key="/cust/cust*.do">custController</prop>
+				<prop key="/cust/acct*.do">custController</prop>
+				<prop key="/cust/mail*.do">custController</prop>
+				<prop key="/cust/cms*.do">custController</prop>
+				<prop key="/cust/asbl*.do">custController</prop>
+				<prop key="/cust/del*.do">custController</prop>
+				<prop key="/cust/recode*.do">custController</prop>
+				<prop key="/cust/complaint*.do">custController</prop>
+				<prop key="/cust/hist*.do">custHistController</prop>
+				<prop key="/cust/mod*.do">custModController</prop>
+				<prop key="/cust/search*.do">custHistController</prop>
+				<prop key="/mod/*.do">custModController</prop>
+				<prop key="/modAcct*.do">etcModController</prop>
+
+				<prop key="/call*.do">custCallController</prop>
+				<prop key="/record*.do">custCallController</prop>
+				<prop key="/alarm*.do">alarmController</prop>
+				<prop key="/cust/ani*.do">custController</prop>
+				
+				<prop key="/cust/crm*.do">custController</prop>
+				
+				<prop key="/cust/saveCallResAgt.do">custController</prop>
+				
+				<prop key="/cust/kcbCust*.do">custController</prop>
+
+				<!--  고객검색 -->
+				<prop key="/cust/search/*.do">custSearchController</prop>
+
+				<!-- 빠른상담 -->
+                <prop key="/consult/consult*.do">consultController</prop>
+
+				<!--  공통검색 -->
+				<prop key="/zipcode/*.do">zipcodeController</prop>
+
+
+                <!-- email / sms -->
+                <prop key="/email*.do">emailController</prop>
+                <prop key="/sms*.do">smsController</prop>
+                <prop key="/dm/dm*.do">dmController</prop>
+
+				<!--  campaign  -->
+				<prop key="/camp/campMng*.do">campMngController</prop>
+				<prop key="/camp/campExtr*.do">campExtrController</prop>
+				<prop key="/camp/campAgtAllot*.do">campAgtAllotController</prop>
+				<prop key="/camp/campChk*.do">campChkController</prop>
+				<prop key="/camp/campAltr*.do">altrController</prop>
+				<prop key="/camp/bund*.do">bundController</prop>
+
+                <!-- 분석  -->
+                <prop key="/analysis/*.do">analysisController</prop>
+
+                <!-- 대출 접수관리 -->
+                <prop key="/famsLoan*.do">famsLoanController</prop>
+                
+                <!-- 개인신용  -->
+                <prop key="/raw/*.do">rawController</prop>
+                
+                <!-- fams > 개인파산,개인회생 -->
+                <prop key="/law/*.do">lawController</prop>
+                <prop key="/law/lawS*.do">lawSearchController</prop>
+
+                <!-- KSNET -->
+                <prop key="/ksnet/*.do">ksnetController</prop>
+                
+                
+                <!-- KCB FRAUD -->
+                <prop key="/kcbfraud/*.do">KCB_FraudController</prop>
+                
+				<!-- 사업계획 -->
+                <prop key="/fams/plan/*.do">yearPlanController</prop>
+                
+                <!-- 액셀 업로드  -->
+                <prop key="/fams/excelUpload/*.do">excelDataUploadController</prop>     
+                
+                <!-- 전세자금연장  -->
+                <prop key="/fils/mngExlist/*.do">mngLoanExListController</prop>
+                
+                <!-- 햇살론 -->
+                <prop key="/fils/sunshineloan/*.do">sunShineLoanController</prop>
+                
+                <!-- 자동차 직접영업 -->
+                <prop key="/drctcar/*.do">mngLoanDrctcarController</prop>
+                
+                <!--soft phone -->
+          		<prop key="/phone/*.do">phoneController</prop>
+          		
+          		<!-- SLA -->
+          		<prop key="/sla/*.do">SLAController</prop>
+          		
+          		<!-- SCRAP -->
+          		<prop key="/sc/*.do">scrapController</prop>
+          		
+          		<prop key="/dpay/*.do">dpayController</prop>
+                
+                 <!-- 차량후순위 -->
+                <prop key="/juniorcar/*.do">mngLoanJuniorcarController</prop>
+                
+                <!-- primo online -->
+				<prop key="/fams/primo/*.do">primoOnlineController</prop>
+                <prop key="/fams/ifisOnlineTrade/*.do">primoOnlineTradeController</prop>
+                
+                <!-- 콜센터연동 -->
+                <prop key="/call/callLoan*.do">LoanApplyController</prop>
+                
+                <!-- 중앙회 가상계좌 -->
+                <prop key="/fams/virt/*.do">virtController</prop>
+                
+                <!-- 법인카드경비관리 -->
+                <prop key="/fbiz/*.do">bizMngController</prop>
+                <prop key="/fbiz/ifis*.do">bizIfisController</prop>
+                
+                
+                <!-- 차량스크래핑 2017.04.18 -->
+                <prop key="/scrapCar/*.do">scrapCarController</prop>
+                
+                
+                <!-- 햇살론 2017.03~ -->
+                <prop key="/ifis/sun/*.do">ifisSunController</prop>
+                <prop key="/ifis/sunview/*.do">ifisSunViewController</prop>
+                
+                <prop key="/sun/mnglist/*.do">sunLoanListController</prop>
+                <prop key="/sun/mngloan/*.do">sunLoanDetailController</prop>
+                <prop key="/sun/mngjudge/*.do">sunLoanJudgeController</prop>
+                <prop key="/sun/mngfile/*.do">sunLoanFileController</prop>
+                
+                
+                <!-- 차량시세 데이터 업로드 -->
+                <prop key="/dataUpload/*.do">dataUploadController</prop>
+                <!-- 고객지원요청 -->
+                <prop key="/taskreq/*.do">taskReqController</prop>
+                
+                <prop key="/custMinWon/*.do">minwonController</prop>
+                
+                
+                <!-- 햇살론 사후관리 -->
+                <prop key="/fams/sunifis/*.do">ifisSunDebtController</prop>
+                <prop key="/fams/sun/*.do">sunDebtController</prop>
+                <prop key="/fams/sunlist/*.do">sunDebtListController</prop>
+                
+                <!-- WEB FAX -->
+				<prop key="/webfax/r*.do">webFaxController</prop>
+				<prop key="/webfax/g*.do">webFaxController</prop>
+				<prop key="/webfax/u*.do">webFaxController</prop>
+				
+				<prop key="/multi/*.do">multiOperController</prop>
+					
+				<!-- Push -->
+				<prop key="/push/*.do">pushController</prop>
+				
+				<!-- APP메뉴관리 -->
+				<prop key="/appmng/appmenu/*.do">appMenuMngController</prop>
+				<!-- APP상품관리 -->
+				<prop key="/appmng/appprdct/*.do">appPrdctMngController</prop>
+				<!-- APP약관관리 -->
+				<prop key="/appmng/appterms/*.do">appTermsMngController</prop>
+				<!-- APP공지관리 -->
+				<prop key="/appmng/appnotice/*.do">appNoticeMngController</prop>
+				<!-- APP errorLog -->
+				<prop key="/appmng/errorlog/*.do">appErrorLogController</prop>
+			</props>
+		</property>
+	</bean>
+
+    <bean id="urlMapping2" class="org.springframework.web.servlet.handler.SimpleUrlHandlerMapping">
+        <property name="order"><value>2</value></property>
+        <property name="mappings">
+            <props>
+                <!-- static view mapping -->
+                <prop key="/log*.do">loginController</prop>
+                <prop key="/code*.do">codeController</prop>
+                <prop key="/zcode/*.do">codeController</prop>
+                <prop key="/role/*.do">roleController</prop>
+                <prop key="/service*.do">serviceController</prop>
+                <prop key="/service/service*.do">serviceController</prop>
+                <prop key="/service/autoLoanServiceCheck.do">serviceController</prop>
+                <prop key="/member*.do">memberController</prop>
+                <prop key="/viewTeam*.do">memberController</prop>
+                <prop key="/Agent*.do">agentController</prop>
+                <prop key="/advert*.do">advertController</prop>
+                <prop key="/userdata/*.do">mngUserDataController</prop>
+                
+                <prop key="/app/*.do">appMemberController</prop>
+
+                <!-- fams -->
+                <prop key="/systemcodemast*.do">systemCodeMastController</prop>
+                <prop key="/systemdate*.do">systemDateController</prop>
+                <prop key="/systemdate/*.do">systemDateController</prop>
+                <prop key="/systembatch*.do">systemBatchController</prop>
+                <prop key="/batCommand*.do">systemBatchController</prop>
+                <prop key="/systemschedule*.do">systemBatchController</prop>
+                <prop key="/systemSvr*.do">systemBatchController</prop>
+                <prop key="/batch/*.do">batchMastController</prop>
+                <prop key="/indiv/*.do">indivMasterController</prop>
+                 
+                <!-- IVR -->
+                <prop key="/ivr/*.do">IVRController</prop>
+
+                <!-- search / / sms-->
+                <prop key="/searchJobform*.do">searchJobformController</prop>
+                <prop key="/searchPost*.do">searchPostController</prop>
+                <prop key="/searchUniv*.do">searchUnivController</prop>
+                <prop key="/loanCalculator*.do">loanCalculatorController</prop>
+                <prop key="/commonSms*.do">commonSmsController</prop>
+                <prop key="/searchMember*.do">searchMemberController</prop>
+                <prop key="/searchCompany*.do">searchCompanyController</prop>
+                <!-- post Address Upload -->
+				<prop key="/post/*.do">postUploadController</prop>
+				
+				<prop key="/searchCar*.do">searchCarController</prop>	<!-- 차량시세조회 -->
+
+                 <!-- 경영정보  -->
+                <prop key="/statistics/stat*.do">statisticsController</prop>
+                <prop key="/statistics/special*.do">statisticsController</prop>
+				<prop key="/statistics/bond*.do">statisticsController</prop>
+                <prop key="/statistics/finan*.do">statisticsController</prop>
+                <prop key="/statistics/cust*.do">statisticsController</prop>
+                <prop key="/statistics/double*.do">statisticsController</prop>
+                <prop key="/statistics/file*.do">statisticsController</prop>
+                <prop key="/statistics/debt*.do">statisticsController</prop>
+                <prop key="/statistics/sms*.do">statisticsController</prop>
+                <prop key="/statistics/onestop*.do">statisticsController</prop>
+                <prop key="/trust/trust*.do">trustController</prop>                           <!-- 신뢰도평가분석 -->
+                <prop key="/act/act*.do">actController</prop>                                 <!-- 행동유형분석 -->
+
+ 				<prop key="/judgeRecord/judge*.do">judgeRecordController</prop>               <!-- 심사실적통계 -->
+
+ 				<prop key="/manage/manage*.do">manageController</prop>               		<!-- 관리실적통계 -->
+
+				<!-- 채권양도대출 -->
+				<prop key="/bondsend/bondSend*.do">bondSendController</prop>
+				 
+                <!-- 데모사이트 때문에 추가 -->
+                <prop key="/statistics_cti/stat*.do">statisticsCTIController</prop>
+                 <prop key="/statistics_cti/select*.do">statisticsCTIController</prop>
+                <prop key="/res/*.do">resController</prop>
+
+                <!-- 쿼리분석기 -->
+                <prop key="/query*.do">queryController</prop>
+
+  				<!-- primo online 박지민 요청으로 맵핑2로 뺌-->
+				<prop key="/fams/primo/*.do">primoOnlineController</prop>
+                <prop key="/fams/ifisOnlineTrade/*.do">primoOnlineTradeController</prop>
+                
+                <!-- messenger 관련 [s] -->
+                    <!-- 쪽지보내기, 보낸쪽지함  -->
+                    <prop key="/msgr/send*.do">senderController</prop>
+
+                    <!-- 받은쪽지함 -->
+                    <prop key="/msgr/accept*.do">receiverController</prop>
+                    <!-- 쪽지 받기 -->
+                    <prop key="/msgr/receiver*.do">receiverController</prop>
+
+                    <!-- 메시지 모듈  -->
+                    <prop key="/msgr/message*.do">messageController</prop>
+
+                    <!-- 그룹관리  -->
+                    <prop key="/msgr/mng*.do">mngController</prop>
+
+                    <!-- Flex 세션관리용 -->
+                    <prop key="/msgr/session*.do">mngController</prop>
+
+                     <!-- ETC -->
+                 	<prop key="/etc/*.do">etcController</prop>
+                 	<prop key="/egloan/*.do">egloanController</prop>
+	                <!-- messenger 관련 [e] -->
+	                
+	             	<!-- WEB FAX -->
+					<prop key="/webfax/c*.do">webFaxController</prop>
+					
+					<!-- 지주사 신용조회 -->
+					<prop key="/woorigroup/CreditNice*.do">creditController</prop>
+					<prop key="/woorigroup/CreditKcb*.do">creditKcbController</prop>
+					
+					<prop key="/searchEncar*.do">searchCarController</prop>
+					
+            </props>
+        </property>
+
+    </bean>
+   <!--
+   <bean id="urlMapping3" class="org.springframework.web.servlet.handler.SimpleUrlHandlerMapping">
+        <property name="order"><value>3</value></property>
+
+
+        <property name="interceptors">
+            <list>
+                <ref bean="signonInterceptorFlex"/>
+            </list>
+        </property>
+
+        <property name="mappings">
+            <props>
+                <prop key="/session*.do">loginController</prop>
+            </props>
+        </property>
+
+    </bean>
+     
+
+    <bean id="urlMappingTest" class="org.springframework.web.servlet.handler.SimpleUrlHandlerMapping">
+        <property name="order"><value>4</value></property>
+        <property name="mappings">
+            <props>
+                <prop key="/test/*.do">testController</prop>
+                <prop key="/mngloantest/*.do">mngLoanDetailController</prop>
+
+            </props>
+        </property>
+
+    </bean>
+    -->
+
+
+
+    <!-- <bean id="signonInterceptor" class="com.foresys.fsys.system.interceptor.SignonInterceptor"/> -->
+    
+    <bean id="signonInterceptor" class="com.foresys.fsys.system.interceptor.SignonInterceptor">
+        <property name="signonInterceptorcheck" ref="signonInterceptorcheck" />
+    </bean>
+       
+    <bean id="signonInterceptorcheck" parent="commonSqlMapClientDaoSupport" class="com.foresys.fsys.system.interceptor.SignonInterceptorcheck">
+        <property name="sqlMapClient" ref="sqlMapClient"/>
+    </bean>
+        
+    
+    <bean id="signonInterceptorFlex" class="com.foresys.fsys.system.interceptor.SignonInterceptorFlex"/>
+
+</beans>

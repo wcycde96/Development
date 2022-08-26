@@ -1,0 +1,1429 @@
+<?xml version="1.0" encoding="EUC-KR"?>
+<!DOCTYPE sqlMap PUBLIC "-//ibatis.apache.org//DTD SQL Map 2.0//EN" "http://ibatis.apache.org/dtd/sql-map-2.dtd">
+
+<!-- 사용자  TB_FS_AMMEMBER -->
+<sqlMap namespace="ammember">
+   
+    <!-- ID 체크 -->
+    <select id="CHK_ID"  parameterClass="hmap" resultClass="long">
+        SELECT
+            COUNT(*) as CNT
+        FROM 
+            TB_FS_AMMEMBER
+        WHERE
+            MEMBER_NO = #member_no#
+    </select>
+    
+    <!-- PW 체크 -->
+    <select id="CHK_PW"  parameterClass="hmap" resultClass="long">
+        SELECT
+            COUNT(*) as CNT
+        FROM 
+            TB_FS_AMMEMBER
+        WHERE
+            MEMBER_NO = #member_no#
+        AND MEMBER_PW = XX1.ENC_VARCHAR2_INS(#member_pw#,10,'AJU_SHA')
+    </select>
+    
+    <!-- IP 체크 -->
+    <select id="CHK_IP"  parameterClass="hmap" resultClass="long">
+        SELECT
+            COUNT(*) as CNT
+        FROM 
+            TB_FS_AMMEMBER
+        WHERE
+            MEMBER_NO = #member_no#
+        AND MEMBER_PW = XX1.ENC_VARCHAR2_INS(#member_pw#,10,'AJU_SHA')
+        AND #member_ip# like '%'||MEMBER_IP||'%'
+    </select>
+    
+    <!-- STATE 체크 -->
+    <select id="CHK_ST"  parameterClass="hmap" resultClass="long">
+        SELECT
+            COUNT(*) as CNT
+        FROM 
+            TB_FS_AMMEMBER
+        WHERE
+            MEMBER_NO = #member_no#
+        AND MEMBER_PW = XX1.ENC_VARCHAR2_INS(#member_pw#,10,'AJU_SHA')
+        AND #member_ip# like '%'||MEMBER_IP||'%'
+        AND MEMBER_STATE = '01'
+    </select>
+    
+    <!-- 허용여부 체크 -->
+    <select id="CHK_ACCESS"  parameterClass="hmap" resultClass="long">
+        SELECT
+            COUNT(*) as CNT
+        FROM
+            TB_FS_AMMEMBER
+        WHERE
+            MEMBER_NO = #member_no#
+        AND LOGIN_ACCESS_YN = 'Y'
+    </select>
+    
+    <!-- 비밀번호 초기화 체크 -->
+    <select id="CHK_PW_INIT" parameterClass="hmap" resultClass="long">
+      	SELECT
+            COUNT(*) as CNT
+        FROM
+            TB_FS_AMMEMBER
+        WHERE
+            MEMBER_NO = #member_no#
+            AND PW_RESET_YN = 'N'
+    </select>
+    
+    <!-- 비밀번호 주기 체크-->
+    <select id="CHK_PW_CHK" parameterClass="hmap" resultClass="long">
+    	SELECT
+           TO_CHAR(SYSDATE, 'YYYYMMDD') - LPAD(PW_CHG_DT, 8) - (SELECT CODE_VAL1 FROM TB_FS_ZCCODE WHERE CODEGRP = 'PWDPD' AND CODE='01' AND USE_YN = 'Y')  AS CNT
+        FROM
+            TB_FS_AMMEMBER
+        WHERE
+            MEMBER_NO = #member_no#
+    </select>
+    
+     <!-- IFIS 비밀번호 주기 체크-->
+    <select id="CHK_IFIS_PW_CHK" parameterClass="hmap" resultClass="long">
+    	SELECT
+   			DECODE(IFIS_PW_CHG_DT, null, -30, TO_CHAR(SYSDATE, 'YYYYMMDD') - LPAD(IFIS_PW_CHG_DT, 8) - (SELECT CODE_VAL1 FROM TB_FS_ZCCODE WHERE CODEGRP = 'PWDPD' AND CODE='01' AND USE_YN = 'Y')) AS CNT
+        FROM
+            TB_FS_AMMEMBER
+        WHERE
+            MEMBER_NO = #member_no#
+    </select>
+    
+    <!-- 사용자 내선번호 변경 -->
+    <update id="update_agt_phone" parameterClass="hmap">
+        UPDATE 
+            TB_FS_AMMEMBER
+        SET 
+            AGT_PHONE = #agt_phone#         
+        WHERE 
+            MEMBER_NO = #member_no#
+    </update>
+    
+    <sql id="column_memeber_check">
+     		A.MEMBER_NO
+            , A.MEMBER_NM
+            , #member_pw# as MEMBER_PW
+            , #member_ip# as MEMBER_IP
+            ,NVL((SELECT VIEW_TEAM FROM TB_FA_TEAM_MNG WHERE VIEW_MEMBER_NO = A.MEMBER_NO), 'none')AS TEAM_CODE
+            , A.ROLE_CD
+            , (SELECT ROLE_NM FROM TB_FS_AMROLE WHERE ROLE_CD = A.ROLE_CD) AS ROLE_NM
+			, MEMBER_STATE            
+            , BANK_CD
+            , UF_CodeName ('001',BANK_CD) BANK_NM
+            , BRANCH_CD
+            , UF_CodeName ('002',BRANCH_CD) BRANCH_NM
+            , A.POSITION
+            , UF_CodeName ('007',POSITION) POSITION_NM
+            , DEPT_CD
+            , UF_CodeName ('015',DEPT_CD) DEPT_NM
+            , DEPT_JOB
+            , MOBILE_NO          
+            , AGT_STAT
+            , UF_CodeName ('931',AGT_STAT) AGT_STAT_NM
+            , AGT_STAT_DATE
+            , AGT_ROLE
+            , UF_CodeName ('932',AGT_ROLE) AGT_ROLE_NM
+            , AGT_GROUP
+            , AGT_CTI
+            , AGT_PHONE
+            , AGT_EXCEL
+            , AGT_ASSIGN
+            , A.CHECKER
+            , TO_CHAR(sysdate, 'HH24') || ':' || 
+              TO_CHAR(sysdate, 'MI') || ':' || 
+              TO_CHAR(sysdate, 'SS') AS LOGIN_TIME
+            , (SELECT 
+                    SERVICE_CD 
+               FROM (
+                    SELECT 
+                        * 
+                    FROM 
+                        TB_FS_AMSERVICE 
+                    WHERE 
+                        SERVICE_CD IN 
+                        (
+                            SELECT 
+                                SERVICE_CD 
+                            FROM 
+                                TB_FS_AMROLE_SERVICE 
+                            WHERE 
+                                ROLE_CD = 
+                                (
+                                    SELECT 
+                                        ROLE_CD 
+                                    FROM 
+                                        TB_FS_AMMEMBER 
+                                    WHERE 
+                                        MEMBER_NO = #member_no#
+                                 )
+                        )
+                    AND SERVICE_STEP = 1 
+                    ORDER BY 
+                        SERVICE_ORDER
+                ) WHERE ROWNUM=1
+                ) AS SERVICE
+               , UF_CRYD_NEW2(IFIS_PWD) AS IFIS_PWD
+               , NVL(IFIS_LOAN_YN,'N') IFIS_LOAN_YN
+               , NVL(IFIS_DAILY_YN,'N') IFIS_DAILY_YN
+               , TERMINAL_NO
+               , uf_cryd_new(MEMBER_IDNO,'MEMBER_IDNO','TB_FS_AMMEMBER')  AS  MEMBER_IDNO
+               , SMS_TEL_NO1
+               , SMS_TEL_NO2
+               , SMS_TEL_NO3
+               , REC_TYPE
+               , (
+                    SELECT 
+                         a.SERVICE_CD
+                     FROM
+                         (            
+                         SELECT 
+                             SERVICE_NM
+                             , SERVICE_CD
+                             , SERVICE_ACT
+                             , SERVICE_STEP
+                             , SERVICE_REF
+                        FROM 
+                            TB_FS_AMSERVICE
+                        START WITH 
+                            SERVICE_STEP = 1
+                        CONNECT BY PRIOR 
+                            SERVICE_CD = SERVICE_REF
+                        ORDER SIBLINGS BY 
+                            SERVICE_ORDER
+                        ) a
+                        , TB_FS_AMROLE_SERVICE b
+                    WHERE 
+                        a.SERVICE_CD = b.SERVICE_CD
+                    AND b.ROLE_CD = (
+                                                SELECT 
+                                                    ROLE_CD 
+                                                FROM 
+                                                    TB_FS_AMMEMBER 
+                                                WHERE 
+                                                    MEMBER_NO = #member_no#
+                                             )
+                    AND a.SERVICE_STEP = 3
+                    and rownum=1
+              ) SERVICE_CD
+              , CAMPAUTH
+              , IFIS_PWD_HASH
+              , IFIS_USE_CODE
+              , NVL(INQUIRY_ROLE, '0') AS INQUIRY_ROLE  
+    </sql>
+    
+    <!-- 로그인 체크 -->
+    <select id="member_check"  parameterClass="hmap" resultClass="ammemberInfo">
+        SELECT 
+            <include refid="column_memeber_check"/>
+            , 'A' AS ACCESS_TYPE
+        FROM 
+            TB_FS_AMMEMBER A
+        WHERE 
+            MEMBER_NO = #member_no#
+        AND MEMBER_PW = XX1.ENC_VARCHAR2_INS(#member_pw#,10,'AJU_SHA')
+        AND #member_ip# like '%'||MEMBER_IP||'%'
+        AND MEMBER_STATE = '01'
+        AND ACCESS_YN = 'Y'
+    </select>
+    
+    
+     <!-- 로그인 체크_콜센터-->
+    <select id="member_check_call"  parameterClass="hmap" resultClass="ammemberInfo">
+        SELECT 
+            <include refid="column_memeber_check"/>
+            , 'C' AS ACCESS_TYPE
+        FROM 
+            TB_FS_AMMEMBER A
+        WHERE 
+            MEMBER_NO = #member_no#
+        <!-- AND MEMBER_PW = XX1.ENC_VARCHAR2_INS(#member_pw#,10,'AJU_SHA')
+        AND #member_ip# like '%'||MEMBER_IP||'%'  -->
+        AND MEMBER_STATE = '01'
+    </select>
+    
+    <!-- 공통 조건 -->
+    <sql id="common_WHERE">        
+        <isNotEmpty prepend="AND" property="member_no"		> MEMBER_NO like '%'||#member_no#||'%'	</isNotEmpty>
+        <isNotEmpty prepend="AND" property="member_nm"		> MEMBER_NM like '%'||#member_nm#||'%'	</isNotEmpty>
+        <isNotEmpty prepend="AND" property="role_cd"		> ROLE_CD = #role_cd#					</isNotEmpty>
+        <isNotEmpty prepend="AND" property="position"		> POSITION = #position#					</isNotEmpty>
+        <isNotEmpty prepend="AND" property="dept_cd"		> DEPT_CD = #dept_cd#					</isNotEmpty>
+    </sql>
+    
+    <!-- 사용자 전체 목록 -->
+    <select id="list"  parameterClass="hmap" resultClass="hmap">
+    	SELECT 
+            *
+        FROM ( 
+            SELECT
+                e.*, 
+                ROWNUM as RNUM
+            FROM (
+		        SELECT 
+		            MEMBER_NO
+		        	, ROLE_CD
+			        , FN_ROLE_NM(ROLE_CD) AS ROLE_NM
+		        	, MEMBER_NM
+		        	, MEMBER_STATE
+		            , FN_ZCODE_NM('S03',MEMBER_STATE) MEMBER_STATE_NM 
+		        	, BANK_CD
+		            , UF_CodeName ('001',BANK_CD) BANK_NM
+		        	, BRANCH_CD
+		            , UF_CodeName ('002',BRANCH_CD) BRANCH_NM
+		        	, POSITION
+		            , UF_CodeName ('007',POSITION) POSITION_NM
+		        	, DEPT_CD
+		            , UF_CodeName ('015',DEPT_CD) DEPT_NM
+		        	, DEPT_JOB
+		        	, MOBILE_NO
+		        	, MEMBER_IP            
+		        	, AGT_STAT
+		            , UF_CodeName ('931',AGT_STAT) AGT_STAT_NM
+		        	, AGT_STAT_DATE
+		        	, AGT_ROLE
+		            , UF_CodeName ('932',AGT_ROLE) AGT_ROLE_NM
+		        	, AGT_GROUP
+		            , UF_CodeName ('934',AGT_GROUP) as AGT_GROUP_NM
+		        	, AGT_CTI
+		        	, AGT_PHONE
+		        	, AGT_EXCEL
+		        	, AGT_ASSIGN
+		        	, UF_CRYD_NEW2(IFIS_PWD) AS IFIS_PWD
+		            , NVL(IFIS_LOAN_YN,'N') IFIS_LOAN_YN
+		            , NVL(IFIS_DAILY_YN,'N') IFIS_DAILY_YN 
+		            , TERMINAL_NO  
+		            , UF_CRYD_NEW2(MEMBER_IDNO) AS MEMBER_IDNO
+					, SMS_TEL_NO1
+					, SMS_TEL_NO2
+					, SMS_TEL_NO3
+					, REC_TYPE
+					, TEAM_CD
+					, CAMPAUTH
+					, IFIS_USE_CODE
+					, INQUIRY_ROLE
+		        FROM 
+		            TB_FS_AMMEMBER M
+		        WHERE
+		        	MEMBER_STATE = '01'
+		        <include refid="common_WHERE"/>
+		        
+             ) e
+            WHERE            
+                ROWNUM  <![CDATA[<]]>= #END_ROW#
+        )
+        WHERE
+            RNUM <![CDATA[>]]>= #BEGIN_ROW#
+    </select>
+    
+    <!-- 전체 신청 목록  건수 -->
+    <select id="listCount"  parameterClass="hmap" resultClass="string">
+        SELECT
+            COUNT(*) AS value
+        FROM 
+		    TB_FS_AMMEMBER  
+		WHERE
+		       	MEMBER_STATE = '01'
+        <include refid="common_WHERE"/>
+        
+    </select>
+    
+    <select id="Detail" parameterClass="hmap" resultClass="hmap">
+    	SELECT
+			MEMBER_NO
+			, MEMBER_NM
+			, UF_CRYD_NEW2(MEMBER_IDNO) AS MEMBER_IDNO
+			, MEMBER_IP
+			, MEMBER_STATE
+			, FN_ZCODE_NM('S03',MEMBER_STATE) MEMBER_STATE_NM 
+			, POSITION
+			, UF_CodeName ('007',POSITION) POSITION_NM
+			, ROLE_CD
+			, FN_ROLE_NM(ROLE_CD) AS ROLE_NM
+			, BANK_CD
+			, UF_CodeName ('001',BANK_CD) BANK_NM
+			, BRANCH_CD
+			, UF_CodeName ('002',BRANCH_CD) BRANCH_NM
+			, DEPT_CD
+			, UF_CodeName ('015',DEPT_CD) DEPT_NM
+			, DEPT_JOB
+			, replace(MOBILE_NO,'-','') as MOBILE_NO
+			, AGT_STAT
+			, UF_CodeName ('931',AGT_STAT) AGT_STAT_NM
+			, AGT_STAT_DATE
+			, AGT_ROLE
+			, UF_CodeName ('932',AGT_ROLE) AGT_ROLE_NM
+			, AGT_GROUP
+			, UF_CodeName ('934',AGT_GROUP) as AGT_GROUP_NM
+			, AGT_CTI
+			, AGT_PHONE
+			, AGT_EXCEL
+			, AGT_ASSIGN
+			, AGT_ETEL
+			, AGT_DTEL
+			, API_PHONE
+			, UF_CRYD_NEW2(IFIS_PWD) AS IFIS_PWD
+			, IFIS_DAILY_YN
+			, IFIS_LOAN_YN
+			, TERMINAL_NO
+			, SMS_TEL_NO1
+			, SMS_TEL_NO2
+			, SMS_TEL_NO3
+			, TEAM_CD
+			, CAMPAUTH
+			, IFIS_USE_CODE
+			, TO_CHAR(TO_DATE(PW_CHG_DT, 'YYYY-MM-DD HH24:MI:SS') , 'YYYY-MM-DD HH24:MI:SS' ) AS PW_CHG_DT
+			, PW_RESET_YN     
+			, TO_CHAR(TO_DATE(IFIS_PW_CHG_DT, 'YYYY-MM-DD HH24:MI:SS') , 'YYYY-MM-DD HH24:MI:SS' ) AS IFIS_PW_CHG_DT
+			, INQUIRY_ROLE
+			, TO_CHAR(TO_DATE(AGREE_PAPER_DT, 'YYYY-MM-DD HH24:MI:SS') , 'YYYY-MM-DD HH24:MI:SS' ) AS AGREE_PAPER_DT
+		FROM
+			TB_FS_AMMEMBER
+		WHERE 
+            MEMBER_NO = #member_no#	
+    </select>
+    
+    <select id="Detail_DeptCd" parameterClass="hmap" resultClass="hmap">
+    	SELECT
+			MEMBER_NO
+			, MEMBER_NM
+			, UF_CRYD_NEW2(MEMBER_IDNO) AS MEMBER_IDNO
+			, MEMBER_IP
+			, MEMBER_STATE
+			, FN_ZCODE_NM('S03',MEMBER_STATE) MEMBER_STATE_NM 
+			, POSITION
+			, UF_CodeName ('007',POSITION) POSITION_NM
+			, ROLE_CD
+			, FN_ROLE_NM(ROLE_CD) AS ROLE_NM
+			, BANK_CD
+			, UF_CodeName ('001',BANK_CD) BANK_NM
+			, BRANCH_CD
+			, UF_CodeName ('002',BRANCH_CD) BRANCH_NM
+			, DEPT_CD
+			, UF_CodeName ('015',DEPT_CD) DEPT_NM
+			, DEPT_JOB
+			, replace(MOBILE_NO,'-','') as MOBILE_NO
+			, AGT_STAT
+			, UF_CodeName ('931',AGT_STAT) AGT_STAT_NM
+			, AGT_STAT_DATE
+			, AGT_ROLE
+			, UF_CodeName ('932',AGT_ROLE) AGT_ROLE_NM
+			, AGT_GROUP
+			, UF_CodeName ('934',AGT_GROUP) as AGT_GROUP_NM
+			, AGT_CTI
+			, AGT_PHONE
+			, AGT_EXCEL
+			, AGT_ASSIGN
+			, AGT_ETEL
+			, AGT_DTEL
+			, API_PHONE
+			, UF_CRYD_NEW2(IFIS_PWD) AS IFIS_PWD
+			, IFIS_DAILY_YN
+			, IFIS_LOAN_YN
+			, TERMINAL_NO
+			, SMS_TEL_NO1
+			, SMS_TEL_NO2
+			, SMS_TEL_NO3
+			, TEAM_CD
+			, CAMPAUTH
+			, IFIS_USE_CODE
+			, TO_CHAR(TO_DATE(PW_CHG_DT, 'YYYY-MM-DD HH24:MI:SS') , 'YYYY-MM-DD HH24:MI:SS' ) AS PW_CHG_DT
+			, PW_RESET_YN     
+			, TO_CHAR(TO_DATE(IFIS_PW_CHG_DT, 'YYYY-MM-DD HH24:MI:SS') , 'YYYY-MM-DD HH24:MI:SS' ) AS IFIS_PW_CHG_DT
+			, INQUIRY_ROLE
+			, TO_CHAR(TO_DATE(AGREE_PAPER_DT, 'YYYY-MM-DD HH24:MI:SS') , 'YYYY-MM-DD HH24:MI:SS' ) AS AGREE_PAPER_DT
+		FROM
+			TB_FS_AMMEMBER
+		WHERE 
+            DEPT_CD = #dept_cd#	
+        AND MEMBER_STATE ='01'
+    </select>
+    
+    <!-- 사용자 등록 -->
+    <insert id="insert" parameterClass="hmap">
+         INSERT INTO TB_FS_AMMEMBER ( 
+        	MEMBER_NO
+        	, ROLE_CD
+        	, MEMBER_NM
+        	, MEMBER_PW
+        	, MEMBER_STATE
+        	, BANK_CD
+        	, BRANCH_CD
+        	, POSITION
+        	, DEPT_CD
+        	, DEPT_JOB
+        	, MOBILE_NO
+        	, MEMBER_IP
+        	, AGT_STAT
+        	, AGT_STAT_DATE
+        	, AGT_ROLE
+        	, AGT_GROUP
+        	, AGT_CTI
+        	, AGT_PHONE
+        	, AGT_EXCEL
+        	, AGT_ASSIGN
+        	, IFIS_PWD
+            , IFIS_LOAN_YN
+            , IFIS_DAILY_YN
+            , TERMINAL_NO 
+            , MEMBER_IDNO
+            , SMS_TEL_NO1
+			, SMS_TEL_NO2
+			, SMS_TEL_NO3
+			, TEAM_CD
+			, CAMPAUTH
+			, IFIS_PWD_HASH
+			, IFIS_USE_CODE
+			, LOGIN_ACCESS_YN
+			, ACCESS_YN
+			, CRE_DT
+			, INQUIRY_ROLE
+        ) VALUES (
+        	#member_no#
+        	, #role_cd#
+        	, #member_nm#
+        	, XX1.ENC_VARCHAR2_INS(#member_pw#,10,'AJU_SHA')
+        	, #member_state#
+        	, #bank_cd#
+        	, #branch_cd#
+        	, #position#
+        	, #dept_cd#
+        	, #dept_job#
+        	, #mobile_no#
+        	, #member_ip#
+        	, #agt_stat#
+        	, #agt_stat_date#
+        	, #agt_role#
+        	, #agt_group#
+        	, #agt_cti#
+        	, #agt_phone#
+        	, #agt_excel#
+        	, #agt_assign#
+        	, UF_CRYE_NEW2(#ifis_pwd#)
+        	, #ifis_loan_yn#
+        	, #ifis_daily_yn#
+        	, #terminal_no#
+        	, UF_CRYE_NEW(#member_idno#,'member_idno','tb_fs_ammember')
+        	, #sms_tel_no1#
+        	, #sms_tel_no2#
+        	, #sms_tel_no3#
+        	, #team_cd#
+        	, #campauth#
+        	, #ifis_pwd_hash#
+        	, #ifis_use_code#
+        	, #login_access_yn#
+        	, #access_yn#
+        	, TO_CHAR(SYSDATE,'YYYYMMDDHH24MISS')
+        	, #inquiry_role#
+        )
+    </insert>
+    
+    <update id="update" parameterClass="hmap">
+        UPDATE
+        	TB_FS_AMMEMBER
+        SET
+        	 MEMBER_NO = MEMBER_NO
+	         <isNotEmpty prepend="," property="member_nm">	MEMBER_NM = #member_nm#	</isNotEmpty>
+        	 <isNotEmpty prepend="," property="member_idno">	MEMBER_IDNO = XX1.ENC_VARCHAR2_INS(#member_pw#,10,'AJU_SHA')	</isNotEmpty>
+        	 <isNotEmpty prepend="," property="member_pw">	MEMBER_PW = XX1.ENC_VARCHAR2_INS(#member_pw#,10,'AJU_SHA')	</isNotEmpty>
+        	 <isNotEmpty prepend="," property="member_ip">	MEMBER_IP = #member_ip#	</isNotEmpty>
+        	 <isNotEmpty prepend="," property="member_state">	MEMBER_STATE = #member_state#	</isNotEmpty>
+        	 <isNotEmpty prepend="," property="position">	POSITION = #position#	</isNotEmpty>
+        	 <isNotEmpty prepend="," property="role_cd">	ROLE_CD = #role_cd#	</isNotEmpty>
+        	 <isNotEmpty prepend="," property="bank_cd">	BANK_CD = #bank_cd#	</isNotEmpty>
+        	 <isNotEmpty prepend="," property="branch_cd">	BRANCH_CD = #branch_cd#	</isNotEmpty>
+        	 <isNotEmpty prepend="," property="dept_cd">	DEPT_CD = #dept_cd#	</isNotEmpty>
+        	 <isNotEmpty prepend="," property="dept_job">	DEPT_JOB = #dept_job#	</isNotEmpty>
+        	 <isNotEmpty prepend="," property="mobile_no">	MOBILE_NO = #mobile_no#	</isNotEmpty>
+        	 <isNotEmpty prepend="," property="agt_stat">	AGT_STAT = #agt_stat#	</isNotEmpty>
+        	 <isNotEmpty prepend="," property="agt_stat_date">	AGT_STAT_DATE = #agt_stat_date#	</isNotEmpty>
+        	 <isNotEmpty prepend="," property="agt_role">	AGT_ROLE = #agt_role#	</isNotEmpty>
+        	 <isNotEmpty prepend="," property="agt_group">	AGT_GROUP = #agt_group#	</isNotEmpty>
+        	 <isNotEmpty prepend="," property="agt_cti">	AGT_CTI = #agt_cti#	</isNotEmpty>
+        	 <isNotEmpty prepend="," property="agt_phone">	AGT_PHONE = #agt_phone#	</isNotEmpty>
+        	 <isNotEmpty prepend="," property="agt_excel">	AGT_EXCEL = #agt_excel#	</isNotEmpty>
+        	 <isNotEmpty prepend="," property="agt_assign">	AGT_ASSIGN = #agt_assign#	</isNotEmpty>
+        	 <isNotEmpty prepend="," property="agt_etel">	AGT_ETEL = #agt_etel#	</isNotEmpty>
+        	 <isNotEmpty prepend="," property="agt_dtel">	AGT_DTEL = #agt_dtel#	</isNotEmpty>
+        	 <isNotEmpty prepend="," property="api_phone">	API_PHONE = #api_phone#	</isNotEmpty>
+        	 <isNotEmpty prepend="," property="ifis_pwd">	IFIS_PWD = UF_CRYE_NEW2(#ifis_pwd#)	</isNotEmpty>
+        	 <isNotEmpty prepend="," property="ifis_daily_yn">	IFIS_DAILY_YN = #ifis_daily_yn#	</isNotEmpty>
+        	 <isNotEmpty prepend="," property="ifis_loan_yn">	IFIS_LOAN_YN = #ifis_loan_yn#	</isNotEmpty>
+        	 <isNotEmpty prepend="," property="terminal_no">	TERMINAL_NO = #terminal_no#	</isNotEmpty>
+        	 <isNotEmpty prepend="," property="sms_tel_no1">	SMS_TEL_NO1 = #sms_tel_no1#	</isNotEmpty>
+        	 <isNotEmpty prepend="," property="sms_tel_no2">	SMS_TEL_NO2 = #sms_tel_no2#	</isNotEmpty>
+        	 <isNotEmpty prepend="," property="sms_tel_no3">	SMS_TEL_NO3 = #sms_tel_no3#	</isNotEmpty>
+        	 <isNotEmpty prepend="," property="team_cd">	TEAM_CD = #team_cd#	</isNotEmpty>
+        	 <isNotEmpty prepend="," property="campauth">	CAMPAUTH = #campauth#	</isNotEmpty>
+        	 <isNotEmpty prepend="," property="ifis_pwd_hash">	IFIS_PWD_HASH = #ifis_pwd_hash#	</isNotEmpty>
+        	 <isNotEmpty prepend="," property="ifis_use_code">	IFIS_USE_CODE = #ifis_use_code#	</isNotEmpty>
+        	 <isNotEmpty prepend="," property="login_access_yn">	LOGIN_ACCESS_YN = #login_access_yn#	</isNotEmpty>
+        	 <isNotEmpty prepend="," property="access_yn">	ACCESS_YN = #access_yn#	</isNotEmpty>
+        	 <isNotEmpty prepend="," property="inquiry_role">	INQUIRY_ROLE = #inquiry_role#	</isNotEmpty>
+        WHERE
+            MEMBER_NO = #member_no#
+    </update>
+    
+    <delete id="delete" parameterClass="hmap">
+        DELETE 
+        FROM
+            TB_FS_AMMEMBER
+        WHERE 
+            MEMBER_NO = #member_no#
+    </delete>
+    
+    <!-- 역할별 사용자 목록 -->
+    <select id="roleMemberList"  parameterClass="hmap" resultClass="hmap">
+        SELECT 
+            MEMBER_NO
+			, MEMBER_NM
+			, UF_CRYD_NEW2(MEMBER_IDNO) AS MEMBER_IDNO
+			, MEMBER_IP
+			, MEMBER_STATE
+			, FN_ZCODE_NM('S03',MEMBER_STATE) MEMBER_STATE_NM 
+			, POSITION
+			, UF_CodeName ('007',POSITION) POSITION_NM
+			, ROLE_CD
+			, FN_ROLE_NM(ROLE_CD) AS ROLE_NM
+			, BANK_CD
+			, UF_CodeName ('001',BANK_CD) BANK_NM
+			, BRANCH_CD
+			, UF_CodeName ('002',BRANCH_CD) BRANCH_NM
+			, DEPT_CD
+			, UF_CodeName ('015',DEPT_CD) DEPT_NM
+			, DEPT_JOB
+			, MOBILE_NO
+			, AGT_STAT
+			, UF_CodeName ('931',AGT_STAT) AGT_STAT_NM
+			, AGT_STAT_DATE
+			, AGT_ROLE
+			, UF_CodeName ('932',AGT_ROLE) AGT_ROLE_NM
+			, AGT_GROUP
+			, UF_CodeName ('934',AGT_GROUP) as AGT_GROUP_NM
+			, AGT_CTI
+			, AGT_PHONE
+			, AGT_EXCEL
+			, AGT_ASSIGN
+			, AGT_ETEL
+			, AGT_DTEL
+			, API_PHONE
+			, UF_CRYD_NEW2(IFIS_PWD) AS IFIS_PWD
+			, IFIS_DAILY_YN
+			, IFIS_LOAN_YN
+			, TERMINAL_NO
+			, SMS_TEL_NO1
+			, SMS_TEL_NO2
+			, SMS_TEL_NO3
+        FROM 
+            TB_FS_AMMEMBER M
+        WHERE 
+            ROLE_CD = #role_cd#
+    </select>
+    
+    <!-- 역할별 사용자 목록 : 근무상태 -->
+    <select id="roleMemberList_Y"  parameterClass="String" resultClass="hmap">
+        SELECT 
+            MEMBER_NO AS CODE
+			, MEMBER_NM AS NAME
+			, MEMBER_STATE AS STATE		 	
+        FROM 
+            TB_FS_AMMEMBER M
+        WHERE 
+            ROLE_CD = #value#
+            AND MEMBER_STATE = '01'
+    </select>
+    
+    <!-- 역할별 사용자 목록 -->
+    <select id="roleMemberList_N"  parameterClass="hmap" resultClass="hmap">
+        SELECT 
+            MEMBER_NO  
+			, MEMBER_NM  
+			, MEMBER_STATE
+			, AGT_ASSIGN  
+			, TEAM_CD
+			, FN_ZCODE_NM('VW3', TEAM_CD) AS TEAM_CD_NM	
+        FROM 
+            TB_FS_AMMEMBER M
+        WHERE 
+            ROLE_CD = #role_cd#
+            <isNotEmpty prepend="AND" property="member_state">	MEMBER_STATE = #member_state#	</isNotEmpty>
+            <isNull     prepend="AND" property="member_state">  MEMBER_STATE = '01'</isNull>
+            <isNotEmpty prepend="AND" property="agt_assign">	AGT_ASSIGN = #agt_assign#	</isNotEmpty>            
+            <isNotEmpty prepend="AND" property="team_cd">	TEAM_CD = #team_cd#	</isNotEmpty>
+            
+            <isNotNull prepend="ORDER BY" property="order1">  TEAM_CD, MEMBER_NM</isNotNull>            
+            <isNull prepend="ORDER BY" property="order1">  MEMBER_NM </isNull>
+                      
+    </select>
+    
+    <!-- 역할별 사용자 목록 -->
+    <select id="roleMemberList_N_2"  parameterClass="hmap" resultClass="hmap">
+        SELECT 
+            MEMBER_NO  
+			, MEMBER_NM  
+			, MEMBER_STATE
+			, AGT_ASSIGN  
+			, TEAM_CD
+			, FN_ZCODE_NM('VW3', TEAM_CD) AS TEAM_CD_NM	
+        FROM 
+            TB_FS_AMMEMBER M
+        WHERE 
+            (ROLE_CD = '29' or MEMBER_NO='201308')
+            ORDER BY ROLE_CD                    
+    </select>
+    
+    <!-- 역할별 사용자 목록 -->
+    <select id="roleMemberList_N_3"  parameterClass="hmap" resultClass="hmap">
+        SELECT 
+            MEMBER_NO  
+            , MEMBER_NM  
+            , MEMBER_STATE
+            , AGT_ASSIGN  
+            , TEAM_CD
+            , FN_ZCODE_NM('VW3', TEAM_CD) AS TEAM_CD_NM    
+        FROM 
+            TB_FS_AMMEMBER M
+        WHERE 
+            ROLE_CD IN ('12','13','83','84','85')
+            and member_state = '01'
+            and member_no in (SELECT CODE FROM TB_FS_ZCCODE WHERE CODEGRP = 'VW8' AND USE_YN = 'Y') 
+            ORDER BY MEMBER_NM
+    </select>
+    
+    <!-- 역할별 사용자 목록 -->
+    <select id="roleMemberList_N3"  parameterClass="hmap" resultClass="hmap">
+        SELECT 
+            MEMBER_NO  
+			, MEMBER_NM  
+			, MEMBER_STATE
+			, AGT_ASSIGN  
+			, TEAM_CD
+			, FN_ZCODE_NM('VW3', TEAM_CD) AS TEAM_CD_NM	
+        FROM 
+            TB_FS_AMMEMBER M
+        WHERE 
+            ROLE_CD IN ('12','13','84','85')
+            <isNotEmpty prepend="AND" property="member_state">	MEMBER_STATE = #member_state#	</isNotEmpty>
+            <isNull     prepend="AND" property="member_state">  MEMBER_STATE = '01'</isNull>
+            <isNotEmpty prepend="AND" property="agt_assign">	AGT_ASSIGN = #agt_assign#	</isNotEmpty>            
+            <isNotEmpty prepend="AND" property="team_cd">	TEAM_CD = #team_cd#	</isNotEmpty>
+            
+            <isNotNull prepend="ORDER BY" property="order1">  TEAM_CD, MEMBER_NM</isNotNull>            
+            <isNull prepend="ORDER BY" property="order1">  MEMBER_NM </isNull>
+                      
+    </select>
+    
+    
+    <!-- 비번 체크 -->
+    <select id="pwcheck"  parameterClass="hmap" resultClass="long">
+        SELECT
+            COUNT(*) as CNT
+        FROM 
+            TB_FS_AMMEMBER
+        WHERE
+            MEMBER_NO = #member_no#
+        AND MEMBER_PW = XX1.ENC_VARCHAR2_INS(#member_pw#,10,'AJU_SHA')
+    </select>
+    
+    <!-- 비번 수정 -->
+    <update id="updatePw" parameterClass="hmap">
+        UPDATE
+            TB_FS_AMMEMBER
+        SET
+            MEMBER_PW = XX1.ENC_VARCHAR2_INS(#member_pw#,10,'AJU_SHA')
+            , LAST_MODIFY_DATE = TO_CHAR(sysdate, 'YYYYMMDD')
+            , PW_CHG_DT = TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS')
+        WHERE  
+            MEMBER_NO = #member_no#
+    </update>
+    
+      <!-- 상담자 상태값 변경 -->
+    <update id="update2" parameterClass="hmap">
+        UPDATE 
+            TB_FS_AMMEMBER
+        SET AGT_STAT = #agt_stat# 
+           ,AGT_STAT_DATE =sysdate
+        WHERE 
+            MEMBER_NO = #agt_id#
+    </update>
+    
+
+    <!-- 상담자 상태값 변경 -->
+    <update id="update3" parameterClass="hmap">
+        UPDATE 
+            TB_FS_AMMEMBER
+        SET AGT_STAT = #agt_stat# 		   
+		   ,AGT_PHONE = #agt_phone#	        
+           ,AGT_STAT_DATE =sysdate
+        WHERE 
+            MEMBER_NO = #agt_id#
+    </update>
+    
+       <!-- SMS 수신 번호 변경  -->
+    <update id="update4" parameterClass="hmap">
+        UPDATE 
+            TB_FS_AMMEMBER
+        SET SMS_TEL_NO1 = #sphone1# 		   
+		   ,SMS_TEL_NO2 = #sphone2#	        
+           ,SMS_TEL_NO3 = #sphone3#	
+        WHERE 
+            MEMBER_NO = #send_member#
+    </update>   
+    
+        
+    <select id="get1" parameterClass="hmap" resultClass="hmap">			 			
+        SELECT   
+            MEMBER_NO
+        	, ROLE_CD
+        	, MEMBER_NM
+        	, MEMBER_PW
+        	, MEMBER_STATE
+        	, BANK_CD
+        	, BRANCH_CD
+        	, POSITION
+        	, DEPT_CD
+        	, DEPT_JOB
+        	, MOBILE_NO
+        	, MEMBER_IP            
+        	, AGT_STAT
+        	, AGT_STAT_DATE
+        	, AGT_ROLE
+        	, AGT_GROUP
+        	, AGT_CTI
+        	, AGT_PHONE
+        	, AGT_EXCEL
+        	, AGT_ASSIGN
+        FROM 
+            TB_FS_AMMEMBER	
+        WHERE 
+            MEMBER_STATE = '01'
+        <isNotEmpty property="agt_assign">AND AGT_ASSIGN = #agt_assign#</isNotEmpty>
+        <isNotEmpty property="role_cd"> AND ROLE_CD = #role_cd# </isNotEmpty>
+        <isNotEmpty property="MEMBER_NO"> AND MEMBER_NO = #agt_id# </isNotEmpty>
+        <isNotEmpty property="branch_cd"> AND branch_cd = #branch_cd# </isNotEmpty>
+        ORDER BY 
+            MEMBER_NM ASC
+    </select>
+    
+    
+    <select id="get2" parameterClass="hmap" resultClass="hmap">			 			
+        SELECT   
+            MEMBER_NO
+        	, ROLE_CD
+        	, MEMBER_NM
+        	, MEMBER_PW
+        	, MEMBER_STATE
+        	, BANK_CD
+        	, BRANCH_CD
+        	, POSITION
+        	, DEPT_CD
+        	, DEPT_JOB
+        	, MOBILE_NO
+        	, MEMBER_IP
+            
+        	, AGT_STAT
+        	, AGT_STAT_DATE
+        	, AGT_ROLE
+        	, AGT_GROUP
+        	, AGT_CTI
+        	, AGT_PHONE
+        	, AGT_EXCEL
+        	, AGT_ASSIGN
+        FROM 
+            TB_FS_AMMEMBER	
+        WHERE 
+            MEMBER_STATE = '01'
+            AND BRANCH_CD in ('97', '83', '84')
+        ORDER BY 
+            MEMBER_NM ASC
+    </select> 
+    
+
+    <select id="get3" parameterClass="String" resultClass="String">			 			
+        SELECT   
+            MEMBER_NM        	
+        FROM 
+            TB_FS_AMMEMBER	
+        WHERE MEMBER_NO = #value#
+    </select>
+    
+    <!-- 소비자금융, 채권팀 목록 -->
+    <select id="get4" parameterClass="hmap" resultClass="hmap">			 			
+        SELECT   
+            MEMBER_NO
+        	, ROLE_CD
+        	, MEMBER_NM
+        	, MEMBER_PW
+        	, MEMBER_STATE
+        	, BANK_CD
+        	, BRANCH_CD
+        	, POSITION
+        	, DEPT_CD
+        	, DEPT_JOB
+        	, MOBILE_NO
+        	, MEMBER_IP            
+        	, AGT_STAT
+        	, AGT_STAT_DATE
+        	, AGT_ROLE
+        	, AGT_GROUP
+        	, AGT_CTI
+        	, AGT_PHONE
+        	, AGT_EXCEL
+        	, AGT_ASSIGN
+        FROM 
+            TB_FS_AMMEMBER	
+        WHERE 
+            MEMBER_STATE = '01'
+        AND BRANCH_CD IN ('97', '83')
+        ORDER BY 
+            MEMBER_NM ASC
+    </select>
+    <!-- 소비자금융, 채권팀 목록 -->
+    <select id="get5" parameterClass="hmap" resultClass="hmap">			 			
+        SELECT   
+            MEMBER_NO
+        	, ROLE_CD
+        	, MEMBER_NM
+        	, MEMBER_PW
+        	, MEMBER_STATE
+        	, BANK_CD
+        	, BRANCH_CD
+        	, POSITION
+        	, DEPT_CD
+        	, DEPT_JOB
+        	, MOBILE_NO
+        	, MEMBER_IP            
+        	, AGT_STAT
+        	, AGT_STAT_DATE
+        	, AGT_ROLE
+        	, AGT_GROUP
+        	, AGT_CTI
+        	, AGT_PHONE
+        	, AGT_EXCEL
+        	, AGT_ASSIGN
+        FROM 
+            TB_FS_AMMEMBER	
+        WHERE 
+            MEMBER_STATE = '01'
+        AND BRANCH_CD IN ('83')
+        ORDER BY 
+            MEMBER_NM ASC
+    </select>    
+    
+    <!-- 자료관리 // 고객 내선번호,휴대번호 -->
+    <select id="get6" parameterClass="hmap" resultClass="hmap">
+    	SELECT   
+        	MOBILE_NO
+        	,AGT_ETEL
+        FROM 
+            TB_FS_AMMEMBER	
+        WHERE 
+            MEMBER_STATE = '01'
+        <isNotEmpty property="member_no"> AND MEMBER_NO = #member_no# </isNotEmpty>
+        ORDER BY 
+            MEMBER_NM ASC
+    </select>
+    <!-- 사원 목록(ComboBox용) -->
+    <select id="ComboBox" resultClass="hmap">
+        SELECT
+            MEMBER_NO AS CODE
+            , MEMBER_NM AS CODE_NM
+        FROM
+            TB_FS_AMMEMBER
+        WHERE
+            MEMBER_STATE = '01'
+        ORDER BY 
+            MEMBER_NM
+    </select>
+    
+    <!-- 사원 목록(ComboBox용) -->
+    <select id="ComboBox_ROLE" resultClass="hmap">
+        SELECT
+            MEMBER_NO AS CODE
+            , MEMBER_NM AS CODE_NM
+        FROM
+            TB_FS_AMMEMBER
+        WHERE
+            MEMBER_STATE = '01'
+            AND ROLE_CD =#role_cd#
+        ORDER BY 
+            MEMBER_NM
+    </select>
+    
+     <!-- 기표자 목록(ComboBox용) -->
+    <select id="ComboBox4" resultClass="hmap">
+        SELECT
+            MEMBER_NO AS CODE
+            , MEMBER_NM AS CODE_NM
+        FROM
+            TB_FS_AMMEMBER
+        WHERE
+            MEMBER_STATE = '01'
+        AND ROLE_CD = '04'   
+        ORDER BY 
+            MEMBER_NM
+    </select>
+
+	<!-- 사원 목록(ComboBox용) -->
+    <select id="ComboBox60" resultClass="hmap">
+        SELECT
+            MEMBER_NO AS CODE
+            , MEMBER_NM AS CODE_NM
+        FROM
+            TB_FS_AMMEMBER
+        WHERE
+            MEMBER_STATE = '01'
+            AND ROLE_CD <![CDATA[>=]]> '60' AND ROLE_CD <![CDATA[<]]> '70'
+        ORDER BY 
+            MEMBER_NM
+    </select>
+    
+    <!-- 심사자 사원 목록(ComboBox용) -->
+    <select id="ComboBox8000" resultClass="hmap">
+        SELECT
+            MEMBER_NO AS CODE
+            , MEMBER_NM AS CODE_NM
+        FROM
+            TB_FS_AMMEMBER
+        WHERE
+            MEMBER_STATE = '01'
+            AND ROLE_CD <![CDATA[>=]]> '70' AND ROLE_CD <![CDATA[<]]> '73'
+        ORDER BY 
+            MEMBER_NM
+    </select>
+     <!--기표자 사원 목록(ComboBox용) -->
+    <select id="ComboBox4_8000" resultClass="hmap">
+        SELECT
+            MEMBER_NO AS CODE
+            , MEMBER_NM AS CODE_NM
+        FROM
+            TB_FS_AMMEMBER
+        WHERE
+            MEMBER_STATE = '01'
+            AND ROLE_CD = '73'
+        ORDER BY 
+            MEMBER_NM
+    </select>
+	<!-- HANSUNG COPY S -->
+
+
+    <!-- 사용자 전체 목록 -->
+    <select id="List"  parameterClass="hmap" resultClass="hmap">
+        SELECT 
+            MEMBER_NO
+        	, ROLE_CD
+	        , (SELECT ROLE_NM FROM TB_FS_AMROLE WHERE ROLE_CD = M.ROLE_CD) AS ROLE_NM
+        	, MEMBER_NM
+        	, MEMBER_PW
+        	, MEMBER_STATE
+            , FN_ZCODE_NM('S03',MEMBER_STATE) MEMBER_STATE_NM 
+        	, BANK_CD
+            , UF_CodeName ('001',BANK_CD) BANK_NM
+        	, BRANCH_CD
+            , UF_CodeName ('002',BRANCH_CD) BRANCH_NM
+        	, POSITION
+            , FN_FS_BCODE_NAME('29',POSITION) POSITION_NM 
+        	, DEPT_CD
+            , UF_CodeName ('015',DEPT_CD) DEPT_NM
+        	, DEPT_JOB
+        	, MOBILE_NO
+        	, MEMBER_IP            
+        	, AGT_STAT
+            , UF_CodeName ('931',AGT_STAT) AGT_STAT_NM
+        	, AGT_STAT_DATE
+        	, AGT_ROLE
+            , UF_CodeName ('932',AGT_ROLE) AGT_ROLE_NM
+        	, AGT_GROUP
+            , UF_CodeName ('934',AGT_GROUP) as AGT_GROUP_NM
+        	, AGT_CTI
+        	, AGT_PHONE
+        	, AGT_EXCEL
+        	, AGT_ASSIGN
+        	, UF_CRYD_NEW2(IFIS_PWD) AS IFIS_PWD
+            , NVL(IFIS_LOAN_YN,'N') IFIS_LOAN_YN
+            , NVL(IFIS_DAILY_YN,'N') IFIS_DAILY_YN 
+            , TERMINAL_NO  
+            , MEMBER_IDNO
+            , TEAM_CD
+            , CAMPAUTH
+            , IFIS_USE_CODE
+            , PW_CHG_DT
+            , PW_RESET_YN
+            , IFIS_PW_CHG_DT
+            , LOGIN_ERR_CNT
+            , LOGIN_ACCESS_YN
+            , ACCESS_YN
+            , CRE_DT
+            , INQUIRY_ROLE
+        FROM 
+            TB_FS_AMMEMBER M
+        WHERE
+        	MEMBER_STATE = '01' 
+            <isNotEmpty property="member_no" prepend="AND ">MEMBER_NO = #member_no# </isNotEmpty>
+            <isNotEmpty property="member_nm" prepend="AND ">MEMBER_NM = #member_nm# </isNotEmpty>
+            <isNotEmpty property="role_cd"   prepend="AND ">ROLE_CD   = #role_cd# </isNotEmpty>
+            <isNotEmpty property="position"  prepend="AND ">POSITION  = #position# </isNotEmpty>
+            <isNotEmpty property="bank_cd"   prepend="AND ">BANK_CD   = #bank_cd# </isNotEmpty>
+            <isNotEmpty property="branch_cd" prepend="AND ">BRANCH_CD = #branch_cd# </isNotEmpty>
+            <isNotEmpty property="dept_cd"   prepend="AND ">DEPT_CD   = #dept_cd# </isNotEmpty>
+            <isNotEmpty property="agt_cti"   prepend="AND ">AGT_CTI   = #agt_cti# </isNotEmpty>
+            <isNotEmpty property="agt_phone" prepend="AND ">AGT_PHONE = #agt_phone#</isNotEmpty>
+        <isEmpty    property="orderby" prepend="ORDER BY ">MEMBER_NO DESC</isEmpty>
+        <isNotEmpty property="orderby">
+         ORDER BY $orderby$<isNotEmpty property="sort" > $sort$</isNotEmpty> 
+        </isNotEmpty>
+    </select>
+
+ 	<!-- HANSUNG COPY e -->   
+ 	
+ 	
+ 	<!--상담원 콜센터 사원 목록(ComboBox용) -->
+    <select id="gr400_List" resultClass="hmap">
+        SELECT
+            MEMBER_NO AS CODE
+            , MEMBER_NM AS CODE_NM
+        FROM
+            TB_FS_AMMEMBER
+        WHERE
+            MEMBER_STATE = '01'
+            AND AGT_GROUP = '400'
+        ORDER BY 
+            MEMBER_NM
+    </select>
+    
+    <!-- 비번변경여부 체크 -->
+    <select id="CHK_MODI_PW"  parameterClass="hmap" resultClass="long">
+        SELECT
+            COUNT(*) as CNT
+        FROM
+            TB_FS_AMMEMBER
+        WHERE
+            MEMBER_NO = #member_no#
+        AND MEMBER_PW = XX1.ENC_VARCHAR2_INS(#member_pw#,10,'AJU_SHA')
+        AND #member_ip# like '%'||MEMBER_IP||'%'
+        AND MEMBER_STATE = '01'
+        AND ROUND(SYSDATE - TO_DATE(LAST_MODIFY_DATE)) <![CDATA[<]]> 31
+    </select>
+    <select id="get_ifis_psw" parameterClass="string" resultClass="hmap">
+    	 SELECT 
+             UF_CRYD_NEW2(ifis_pwd) AS ifis_psw
+            ,ifis_pwd_hash as ifis_psw_hash
+    	FROM 
+    		tb_fs_ammember
+    	WHERE
+    	    MEMBER_NO = #value#
+ 	</select>
+ 	<update id="update_ifis_psw" parameterClass="hmap" >
+    	 UPDATE
+    	 	tb_fs_ammember
+    	 SET
+    	 	ifis_pwd=UF_CRYE_NEW2(#ifis_pwd#)
+    	 	,ifis_pwd_hash=#ifis_pwd_hash#
+    	 	, IFIS_PW_CHG_DT = TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS')
+    	 WHERE 
+    	 	MEMBER_NO = #ifis_member_no#
+    	 
+ 	</update>
+ 	
+ 	<select id="getMemberInfo" parameterClass="hmap" resultClass="hmap">
+        select 
+    	     MEMBER_NO
+    	     ,MEMBER_IP
+    	     ,TERMINAL_NO
+    	     ,UF_CRYD_NEW2(IFIS_PWD) AS IFIS_PWD
+    	     ,IFIS_PWD_HASH
+    	     ,BRANCH_CD
+    	  from tb_fs_ammember
+        
+        where branch_cd = #br_cd#
+          and ifis_use_code = #ifis_use_code#
+    </select>
+    
+    <!-- 로그인 오류횟수 초기화및 비밀번호 초기화 -->
+    <update id="memberLoginClear" parameterClass="hmap">
+    UPDATE TB_FS_AMMEMBER
+    SET
+    	LOGIN_ACCESS_YN = 'Y'
+    	, LOGIN_ERR_CNT = 0
+    	, MEMBER_PW = XX1.ENC_VARCHAR2_INS(#member_pw#,10,'AJU_SHA')
+    	, PW_RESET_YN = 'Y' 
+    WHERE
+    	MEMBER_NO = #member_no#
+    </update>
+    
+    <!--  비밀번호 변경 -->
+   	<update id="PW_MODIFY" parameterClass="hmap">
+        UPDATE
+            TB_FS_AMMEMBER
+        SET
+            MEMBER_PW = XX1.ENC_VARCHAR2_INS(#member_pw#,10,'AJU_SHA')
+		  , PW_CHG_DT = TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS')
+		  , PW_RESET_YN = 'N'
+        WHERE
+            MEMBER_NO = #member_no#
+    </update>
+    
+    <!-- 로그인 오류회수 변경 -->
+    <update id="update_ERR_CNT" parameterClass="hmap">
+        UPDATE
+            TB_FS_AMMEMBER
+        SET
+            LOGIN_ERR_CNT = LOGIN_ERR_CNT+1
+            , LOGIN_ACCESS_YN = DECODE(LOGIN_ERR_CNT, 4, 'N', 'Y')
+        WHERE
+            MEMBER_NO = #member_no#
+    </update>
+    
+    <!-- 로그인 오류회수 변경 -->
+    <update id="update_ERR_ZERO" parameterClass="hmap">
+        UPDATE
+            TB_FS_AMMEMBER
+        SET
+            LOGIN_ERR_CNT = 0
+            , LOGIN_ACCESS_YN = 'Y'
+        WHERE
+            MEMBER_NO = #member_no#
+    </update>
+    
+    
+     <insert id="insert_hst" parameterClass="hmap">
+     	INSERT INTO TB_FS_HST_AMMEMBER ( 
+	    	MEMBER_NO
+	        , HST_SEQ           
+	        , HST_DT   
+             <isNotNull property="hst_id" prepend=",">	HST_ID  </isNotNull> 
+             <isNotNull property="hst_type" prepend=","> HST_TYPE </isNotNull>              
+			, MEMBER_NM
+			, MEMBER_IDNO
+			, MEMBER_PW
+			, MEMBER_IP
+			, MEMBER_STATE
+			, POSITION
+			, ROLE_CD
+			, BANK_CD
+			, BRANCH_CD
+			, DEPT_CD
+			, DEPT_JOB
+			, MOBILE_NO
+			, AGT_STAT
+			, AGT_STAT_DATE
+			, AGT_ROLE
+			, AGT_GROUP
+			, AGT_CTI
+			, AGT_PHONE
+			, AGT_EXCEL
+			, AGT_ASSIGN
+			, AGT_ETEL
+			, AGT_DTEL
+			, API_PHONE
+			, IFIS_PWD
+			, IFIS_DAILY_YN
+			, IFIS_LOAN_YN
+			, TERMINAL_NO
+			, SMS_TEL_NO1
+			, SMS_TEL_NO2
+			, SMS_TEL_NO3
+			, GRID_VIEW
+			, REC_TYPE
+			, ASSIGN_SEQ
+			, TEAM_CD
+			, VIEW_ASSIGN
+			, VIEW_ASSIGN_DT
+			, ASSIGN_CONPATH
+			, RES_AMT
+			, CAMPAUTH
+			, LAST_MODIFY_DATE
+			, ASSIGN_REJECT_SEQ
+			, IFIS_PWD_HASH
+			, IFIS_USE_CODE
+			, PW_CHG_DT
+			, PW_RESET_YN
+			, IFIS_PW_CHG_DT
+			, LOGIN_ERR_CNT
+			, LOGIN_ACCESS_YN
+			, ASSIGN_SEQ2
+			, VIEW_ASSIGN_DT2
+			, ASSIGN_SEQ3
+			, VIEW_ASSIGN_DT3
+			, ASSIGN_SEQ4
+			, VIEW_ASSIGN_DT4
+			, ACCESS_YN
+			, ASSIGN_SEQ5
+			, VIEW_ASSIGN_DT5
+			, CRE_DT
+			, INQUIRY_ROLE
+       	) 
+		SELECT                                                              	
+			  #member_no#  AS MEMBER_NO
+			, (SELECT NVL( MAX(HST_SEQ),0) + 1 FROM TB_FS_HST_AMMEMBER WHERE MEMBER_NO = #member_no# ) AS HST_SEQ
+			, TO_CHAR(SYSDATE,'YYYYMMDDHH24MISS') AS HST_DT
+			<isNotNull property="hst_id" prepend=","> #hst_id# AS HST_ID </isNotNull>
+			<isNotNull property="hst_type" prepend=","> #hst_type# AS HST_TYPE </isNotNull>
+			, MEMBER_NM
+			, MEMBER_IDNO
+			, MEMBER_PW
+			, MEMBER_IP
+			, MEMBER_STATE
+			, POSITION
+			, ROLE_CD
+			, BANK_CD
+			, BRANCH_CD
+			, DEPT_CD
+			, DEPT_JOB
+			, MOBILE_NO
+			, AGT_STAT
+			, AGT_STAT_DATE
+			, AGT_ROLE
+			, AGT_GROUP
+			, AGT_CTI
+			, AGT_PHONE
+			, AGT_EXCEL
+			, AGT_ASSIGN
+			, AGT_ETEL
+			, AGT_DTEL
+			, API_PHONE
+			, IFIS_PWD
+			, IFIS_DAILY_YN
+			, IFIS_LOAN_YN
+			, TERMINAL_NO
+			, SMS_TEL_NO1
+			, SMS_TEL_NO2
+			, SMS_TEL_NO3
+			, GRID_VIEW
+			, REC_TYPE
+			, ASSIGN_SEQ
+			, TEAM_CD
+			, VIEW_ASSIGN
+			, VIEW_ASSIGN_DT
+			, ASSIGN_CONPATH
+			, RES_AMT
+			, CAMPAUTH
+			, LAST_MODIFY_DATE
+			, ASSIGN_REJECT_SEQ
+			, IFIS_PWD_HASH
+			, IFIS_USE_CODE
+			, PW_CHG_DT
+			, PW_RESET_YN
+			, IFIS_PW_CHG_DT
+			, LOGIN_ERR_CNT
+			, LOGIN_ACCESS_YN
+			, ASSIGN_SEQ2
+			, VIEW_ASSIGN_DT2
+			, ASSIGN_SEQ3
+			, VIEW_ASSIGN_DT3
+			, ASSIGN_SEQ4
+			, VIEW_ASSIGN_DT4
+			, ACCESS_YN
+			, ASSIGN_SEQ5
+			, VIEW_ASSIGN_DT5
+			, CRE_DT
+			, INQUIRY_ROLE
+		FROM TB_FS_AMMEMBER
+		WHERE MEMBER_NO = #member_no#
+    </insert>
+    
+    
+    <insert id="insert_hst2" parameterClass="hmap">
+    </insert>
+    
+    
+    <select id="SALES1_TEAM"  parameterClass="hmap" resultClass="hmap">
+        SELECT MEMBER_NO,
+		       MEMBER_NM,
+		       MEMBER_STATE,
+		       AGT_ASSIGN,
+		       TEAM_CD,
+		       (SELECT CODE_VAL1
+		          FROM TB_FS_ZCCODE
+		         WHERE     CODEGRP = 'VW5'
+		               AND USE_YN = 'Y'
+		               AND CODE_VAL2 = 'XS2'
+		               AND CODE_NM = M.MEMBER_NO)
+		          ASSIGN_YN
+		  FROM TB_FS_AMMEMBER M
+		 WHERE     MEMBER_NO IN
+		              (SELECT CODE_NM
+		                 FROM TB_FS_ZCCODE
+		                WHERE CODEGRP = 'VW5' AND USE_YN = 'Y' AND CODE_VAL2 = 'XS2')
+		       AND MEMBER_STATE = '01'
+                      
+    </select>
+    
+    <update id="memberAgreePaperConfirmSave" parameterClass="hmap">
+	    UPDATE TB_FS_AMMEMBER
+	    SET
+	    	AGREE_PAPER_DT = TO_CHAR(SYSDATE,'YYYYMMDDHH24MISS')
+	    WHERE
+	    	MEMBER_NO = #member_no#
+    </update>
+    
+    <select id="taskReqCheckerLIst" parameterClass="hmap" resultClass="hmap">
+		SELECT
+		*
+		FROM
+			TB_FS_AMMEMBER
+		WHERE
+			DEPT_CD = #dept_cd#
+		ORDER BY
+			MEMBER_NM
+	</select>
+
+	<update id="taskReqCheckerSaveM" parameterClass="hmap">
+		UPDATE
+			TB_FS_AMMEMBER
+		SET
+			CHECKER = #Main1#
+		WHERE
+			MEMBER_NO = #Main2#
+	</update>
+
+	<update id="taskReqCheckerSaveS" parameterClass="hmap">
+		UPDATE
+			TB_FS_AMMEMBER
+		SET
+			CHECKER = #Sub1#
+		WHERE
+			MEMBER_NO = #Sub2#
+	</update>
+
+	<update id="taskReqCheckerSaveDel" parameterClass="hmap">
+		UPDATE
+			TB_FS_AMMEMBER
+		SET
+			CHECKER = ''
+		WHERE
+			DEPT_CD = #dept_cd#
+		AND
+			CHECKER = 'S'
+	</update>
+    
+     <update id="taskReqCheckerreset" parameterClass="hmap">
+	    UPDATE 
+            TB_FS_AMMEMBER
+        SET 
+            CHECKER = ''         
+        WHERE 
+             DEPT_CD = #dept_cd#
+    </update>
+  	
+  	<select id="REQ_CHECKER_NOA" parameterClass="hmap" resultClass="hmap">
+		SELECT
+			MEMBER_NM
+		FROM
+			TB_FS_AMMEMBER
+		WHERE
+			MEMBER_NO = #REQ_CHECKER_NO#	
+	</select>
+  
+  	<select id="RCPT_CHECKER_NOA" parameterClass="hmap" resultClass="hmap">
+		SELECT
+			MEMBER_NM
+		FROM
+			TB_FS_AMMEMBER
+		WHERE
+			MEMBER_NO = #RCPT_CHECKER_NO#	
+	</select>
+    
+</sqlMap>

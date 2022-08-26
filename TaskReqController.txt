@@ -1,0 +1,341 @@
+/** 
+ * ==================================================================
+ *
+ * (주)포이시스., Software License, Version 1.0
+ *
+ * Copyright (c) 2010 (주)포이시스.,
+ * 서울 금천구 가산동 371-28 우림라이온스밸리 B동 1412호
+ * All rights reserved. 
+ * 
+ * DON'T COPY OR REDISTRIBUTE THIS SOURCE CODE WITHOUT PERMISSION. 
+ * THIS SOFTWARE IS PROVIDED ''AS IS'' AND ANY EXPRESSED OR IMPLIED 
+ * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES 
+ * OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE 
+ * DISCLAIMED. IN NO EVENT SHALL (주)포이시스 OR ITS 
+ * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, 
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT 
+ * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF 
+ * USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+ * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, \
+ * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT 
+ * OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF 
+ * SUCH DAMAGE. 
+ * ==================================================================== 
+ * 
+ * For more information on this product, please see 
+ * http://www.foresys.co.kr 
+ * 
+ */
+
+package com.foresys.fsys.taskReq.ctl;
+
+import java.util.HashMap;
+import java.util.Map;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.springframework.web.servlet.ModelAndView;
+
+import com.foresys.fsys.taskReq.service.TaskReqService;
+import com.foresys.lib.common.CommonMultiActionController;
+import com.foresys.lib.spring.AjaxMessageView;
+import com.foresys.lib.util.Convert;
+
+/**
+ * TaskReqController.java
+ * 
+ * @version @(#)TaskReqController.java 1.10 2017.03.07
+ * @author
+ * @modified
+ */
+
+public class TaskReqController extends CommonMultiActionController {
+	private static final Log log = LogFactory.getLog(TaskReqController.class);
+	private TaskReqService taskReqService = null;
+
+	public void setTaskReqService(TaskReqService taskReqService) {
+		this.taskReqService = taskReqService;
+	}
+
+	/**
+	 * [요구사항 리스트 화면]
+	 * 
+	 * @param req
+	 * @param res
+	 * @return model
+	 * @throws Exception
+	 */
+	public ModelAndView taskReqList(HttpServletRequest req, HttpServletResponse res) throws Exception {
+		Map<String, Object> model = new HashMap<String, Object>();
+		taskReqService.taskReqList(model);
+		return new ModelAndView("fsys/taskreq/taskReqList", model);
+	}
+
+	// ##############################
+	public ModelAndView taskReqList_test(HttpServletRequest req, HttpServletResponse res) throws Exception {
+		Map<String, Object> model = new HashMap<String, Object>();
+		taskReqService.taskReqList_test(model);
+		return new ModelAndView("fsys/taskreq/taskReqList_test2", model);
+	}
+
+	public ModelAndView taskReqView_test(HttpServletRequest req, HttpServletResponse res) throws Exception {
+		Map<String, Object> model = new HashMap<String, Object>();
+		HashMap<String, Object> param = convert.toHashMap(req);
+		model = taskReqService.taskReqView(req, param);
+		return new ModelAndView("fsys/taskreq/taskReqView_test", model);
+	}
+
+	// #####################################
+
+	/**
+	 * [요구사항 리스트 조회]
+	 * 
+	 * @param req
+	 * @param res
+	 * @return model
+	 * @throws Exception
+	 */
+	  public ModelAndView getTaskReqList( HttpServletRequest req, HttpServletResponse res ) throws Exception {
+	        Map<String, Object> model = new HashMap<String, Object>();
+			HashMap<String, Object> param = Convert.toHashMap(req);
+			
+			// 처리 상태 배열로
+			param.put("proc_state_cd", req.getParameterValues("proc_state_cd"));
+			if (param.get("proc_state_cd[]") != null) {
+				param.put("proc_state_cd", req.getParameterValues("proc_state_cd[]"));
+			}
+			
+			taskReqService.getTaskReqList(req, model, param);
+			return new ModelAndView("jsonView", model);
+	    }
+
+	/**
+	 * [요구사항 등록/수정/상세화면]
+	 * 
+	 * @param req
+	 * @param res
+	 * @return model
+	 * @throws Exception
+	 */
+	public ModelAndView taskReqView(HttpServletRequest req, HttpServletResponse res) throws Exception {
+		Map<String, Object> model = new HashMap<String, Object>();
+		HashMap<String, Object> param = convert.toHashMap(req);
+		model = taskReqService.taskReqView(req, param);
+		return new ModelAndView("fsys/taskreq/taskReqView", model);
+	}
+
+	public ModelAndView taskReqCheckerForm(HttpServletRequest req, HttpServletResponse res) throws Exception {
+		Map<String, Object> model = new HashMap<String, Object>();
+		HashMap<String, Object> param = convert.toHashMap(req);
+		model = taskReqService.taskReqCheckerForm(req, param);
+		return new ModelAndView("fsys/taskreq/taskReqCheckerForm", model);
+	}
+
+	public void taskReqCheckerSave(HttpServletRequest req, HttpServletResponse res) throws Exception {
+		HashMap<String, Object> param = convert.toHashMap(req);
+
+		// log.info("####taskReqProc_param{}"+param);
+
+		String result = taskReqService.taskReqCheckerSave(req, param);
+
+		String msg = "";
+		String url = "";
+
+		convertToXml.resultToMassage(msg, url, res);
+	}
+
+	/**
+	 * [요구사항 등록/수정처리]
+	 * 
+	 * @param req
+	 * @param res
+	 * @return
+	 * @throws Exception
+	 */
+	public void taskReqProc(HttpServletRequest req, HttpServletResponse res) throws Exception {
+		HashMap<String, Object> param = convert.toHashMap(req);
+
+		// log.info("####taskReqProc_param{}"+param);
+
+		String result = taskReqService.taskReqProc(req, param);
+
+		String msg = "";
+		String url = "";
+
+		convertToXml.resultToMassage(msg, url, res);
+	}
+
+	public void taskReqApprove(HttpServletRequest req, HttpServletResponse res) throws Exception {
+		HashMap<String, Object> param = convert.toHashMap(req);
+
+		String result = taskReqService.taskReqApprove(req, param);
+
+		String msg = "";
+		String url = "";
+
+		convertToXml.resultToMassage(msg, url, res);
+	}
+
+	public void taskReqRcpt(HttpServletRequest req, HttpServletResponse res) throws Exception {
+		HashMap<String, Object> param = convert.toHashMap(req);
+		String result = taskReqService.taskReqRcpt(req, param);
+		String msg = "";
+		String url = "";
+
+		convertToXml.resultToMassage(msg, url, res);
+	}
+	public void taskReqChange(HttpServletRequest req, HttpServletResponse res) throws Exception {
+		HashMap<String, Object> param = convert.toHashMap(req);
+		String result = taskReqService.taskReqChange(req,param);
+		String msg = "";
+		String url = "";
+		convertToXml.resultToMassage(msg, url, res);
+	}
+
+	/**
+	 * [요구사항 삭제처리]
+	 * 
+	 * @param req
+	 * @param res
+	 * @throws Exception
+	 */
+	public void taskReqDelete(HttpServletRequest req, HttpServletResponse res) throws Exception {
+		HashMap<String, Object> param = convert.toHashMap(req);
+		String result = taskReqService.taskReqDelete(req, param);
+
+		String msg = "";
+		String url = "";
+
+		convertToXml.resultToMassage(msg, url, res);
+	}
+
+	/**
+	 * [요구사항 요청처리, 테스트완료처리]
+	 * 
+	 * @param req
+	 * @param res
+	 * @throws Exception
+	 */
+	public void taskReqSet(HttpServletRequest req, HttpServletResponse res) throws Exception {
+		HashMap<String, Object> param = convert.toHashMap(req);
+		String result = taskReqService.taskReqSet(req, param);
+
+		String msg = "";
+		String url = "";
+
+		convertToXml.resultToMassage(msg, url, res);
+	}
+
+	public void taskReqListChgState(HttpServletRequest req, HttpServletResponse res) throws Exception {
+		HashMap<String, Object> param = convert.toHashMap(req);
+		String result = taskReqService.taskReqListChgState(req, param);
+
+		String msg = "";
+		String url = "";
+
+		convertToXml.resultToMassage(msg, url, res);
+	}
+
+	/**
+	 * [이력 목록 팝업]
+	 * 
+	 * @param req
+	 * @param res
+	 * @return model
+	 * @throws Exception
+	 */
+	public ModelAndView taskReqHstListPopup(HttpServletRequest req, HttpServletResponse res) throws Exception {
+		Map<String, Object> model = new HashMap<String, Object>();
+		HashMap<String, Object> param = convert.toHashMap(req);
+
+		// log.info("########### param{}"+param);
+
+		model = taskReqService.taskReqHstListPopup(req, param);
+
+		// log.info("########### model{}"+model);
+
+		return new ModelAndView("fsys/taskreq/taskReqHstListPopup", model);
+	}
+
+	/**
+	 * [이력 목록 조회]
+	 * 
+	 * @param req
+	 * @param res
+	 * @return model
+	 * @throws Exception
+	 */
+	public ModelAndView getTaskReqHstList(HttpServletRequest req, HttpServletResponse res) throws Exception {
+		Map<String, Object> model = new HashMap<String, Object>();
+		HashMap<String, Object> param = Convert.toHashMap(req);
+
+		taskReqService.getTaskReqHstList(model, param);
+		return new ModelAndView("jsonView", model);
+	}
+
+	/**
+	 * [이력 상세 팝업]
+	 * 
+	 * @param req
+	 * @param res
+	 * @return model
+	 * @throws Exception
+	 */
+	public ModelAndView taskReqHstPopup(HttpServletRequest req, HttpServletResponse res) throws Exception {
+		Map<String, Object> model = new HashMap<String, Object>();
+		HashMap<String, Object> param = convert.toHashMap(req);
+		model = taskReqService.taskReqHstPopup(req, param);
+		return new ModelAndView("fsys/taskreq/taskReqHstPopup", model);
+	}
+
+	/**
+	 * [요구사항 리스트 엑셀]
+	 * 
+	 * @param req
+	 * @param res
+	 * @return model
+	 * @throws Exception
+	 */
+	public ModelAndView taskReqListExcel(HttpServletRequest req, HttpServletResponse res) throws Exception {
+		Map<String, Object> model = new HashMap<String, Object>();
+		Map<String, Object> param = convert.toHashMap(req);
+		model = taskReqService.taskReqListExcel(req, param);
+		return new ModelAndView("fsys/taskreq/taskReqListExcel", model);
+	}
+
+	/**
+	 * [개발완료예정일자 구하기]
+	 * 
+	 * @param req
+	 * @param res
+	 * @throws Exception
+	 */
+	public void getBizDate(HttpServletRequest req, HttpServletResponse res) throws Exception {
+		HashMap<String, Object> param = convert.toHashMap(req);
+
+		String bizDate = taskReqService.getBizDate(req, param);
+
+		// log.info("### getBizDate{}"+param);
+		// log.info("### getBizDate[]"+bizDate);
+
+		String msg = "";
+		String url = "parent.setCpltPsbDt('" + bizDate + "');";
+
+		convertToXml.resultToMassage(msg, url, res);
+	}
+
+	/**
+	 * 자료관리 비밀번호 체크화면
+	 * 
+	 */
+	public ModelAndView taskReqPWCheck(HttpServletRequest request, HttpServletResponse response) {
+
+		HashMap<String, Object> param = Convert.toHashMap(request);
+
+		return new ModelAndView("fsys/taskreq/taskReqPWCheck", param);
+	}
+
+}

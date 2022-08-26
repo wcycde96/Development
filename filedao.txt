@@ -1,0 +1,745 @@
+/** 
+ * ==================================================================
+ *
+ * (주)포이시스., Software License, Version 1.0
+ *
+ * Copyright (c) 2010 (주)포이시스.,
+ * 서울 금천구 가산동 371-28 우림라이온스밸리 B동 1412호
+ * All rights reserved. 
+ * 
+ * DON'T COPY OR REDISTRIBUTE THIS SOURCE CODE WITHOUT PERMISSION. 
+ * THIS SOFTWARE IS PROVIDED ''AS IS'' AND ANY EXPRESSED OR IMPLIED 
+ * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES 
+ * OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE 
+ * DISCLAIMED. IN NO EVENT SHALL (주)포이시스 OR ITS 
+ * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, 
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT 
+ * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF 
+ * USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+ * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, \
+ * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT 
+ * OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF 
+ * SUCH DAMAGE. 
+ * ==================================================================== 
+ * 
+ * For more information on this product, please see 
+ * http://www.foresys.co.kr 
+ * 
+ */
+
+/*
+ * @(#)FileDAO.java 1.10 2010. 2. 5.
+ */
+
+package com.foresys.fsys.system.dao;
+
+import java.io.File;
+import java.net.URLEncoder;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.servlet.http.HttpServletRequest;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.multipart.MultipartHttpServletRequest;
+
+import com.foresys.fsys.system.model.AmmemberInfo;
+import com.foresys.lib.common.CommonSqlMapClientDaoSupport;
+import com.foresys.lib.oreily.MultipartRequest;
+import com.foresys.lib.oreily.multipart.DefaultFileRenamePolicy;
+import com.foresys.lib.util.CoFileEncDec;
+import com.foresys.lib.util.DateUtil;
+import com.foresys.lib.util.Convert;
+
+
+/**
+ * FileDAO.java
+ *
+ * @version @(#)FileDAO.java 1.10 2010. 2. 5.
+ * @author 전정우(Jung-Woo, Jun)
+ * @modified 
+ */
+
+public class FileDAO extends CommonSqlMapClientDaoSupport{
+	
+	private static final Log log = LogFactory.getLog(FileDAO.class);
+	public static URLEncoder encoder;
+	
+	private DateUtil dateUtil = new DateUtil();
+	
+	/**
+	 *  [파일업로드 디렉토리]
+	 *  
+	 * @return dir
+	 * @throws Exception
+	 */
+	private String REALDIR() throws Exception {
+		String dir = "D:/Upload/PDF";	//저장할 디렉토리
+		return dir;
+	}
+	
+	/**
+	 *  [파일업로드 제한용량]
+	 *  
+	 * @return limit
+	 * @throws Exception
+	 */
+	private int SIZELIMIT() throws Exception {
+		int limit = 10 * 1024 * 1024;
+		return limit;
+	}
+	
+	/**
+	 *  [파일업로드 목록]
+	 *  
+	 * @param req
+	 * @return model
+	 * @throws Exception
+	 */
+    public Map<String, Object> fileUploadList(HttpServletRequest req) throws Exception 
+    {
+    	Map<String, Object> model = new HashMap<String, Object>();   
+    	String req_no = req.getParameter("req_no");	
+    	
+    	model.put("fileList", getSqlMapClientTemplate().queryForList("zfile.List", req_no));	
+    	model.put("fileCnt", getSqlMapClientTemplate().queryForObject("zfile.count", req_no));
+    	model.put("MaxSize", SIZELIMIT());
+    	
+		return model;
+    } 
+    
+    /**
+     *  [파일업로드]
+     *  
+     * @param req
+     * @return result
+     * @throws Exception
+     */
+    public long fileUploadInsert(HttpServletRequest req) throws Exception {
+    	
+		long result = 1;
+		
+		Map<String, Object> model = new HashMap<String, Object>(); 
+		
+		try{
+			MultipartRequest multi = new MultipartRequest(req, REALDIR(), SIZELIMIT(),"euc-kr",new DefaultFileRenamePolicy());
+
+			String cre_id 			= multi.getParameter("cre_id");	
+			String file_title 		= multi.getParameter("file_title");	
+			String file_desc 		= multi.getParameter("file_desc");
+			String view_yn 			= multi.getParameter("view_yn");
+			String originFileName 	= multi.getOriginalFileName("org_file_nm");
+			String ext 				= originFileName.substring(originFileName.lastIndexOf(".")+1);
+
+			if(originFileName == null) {  
+				log.info("파일이 업로드 되지 않았습니다!!");
+			} else {
+				File f = multi.getFile("org_file_nm");
+				int fileSize = (int)f.length();
+				
+				model.put("cre_id", cre_id);
+				model.put("file_title", file_title);
+				model.put("file_desc", file_desc);
+				model.put("view_yn", view_yn);
+				model.put("org_file_nm",originFileName );
+				model.put("svr_file_nm",encoder.encode(originFileName));
+				model.put("svr_dir",REALDIR());  //파일경로
+				model.put("file_size", fileSize);
+				model.put("file_ext", ext );
+			}
+				    	
+	    	try{
+	    		getSqlMapClientTemplate().insert("zfile.insert", model);
+	    	}
+	    	catch(Exception ex){
+	    		result = -1;
+	    		log.error("#fileUploadInsert Exception[" + ex + "] ");
+	    	}
+		} catch(Exception ex) {
+			result = -1;
+			log.info("# fileUploadInsert Exception : "+ex.getMessage());
+		} 
+      	
+		return result;  
+    } 
+    
+    public Map<String, Object> loanAppFileDetail(HttpServletRequest req) throws Exception {
+		
+		Map<String, Object> model = new HashMap<String, Object>();
+		HashMap<String, Object> param = convert.toHashMap(req);
+	
+		model.put("DT", getSqlMapClientTemplate().queryForObject("zfile.Detail", param));
+		
+		return model;
+	}
+    
+
+    public long loanAppFileUpdate(HttpServletRequest req) throws Exception 
+	{
+    	long result = 1;
+		
+		Map<String, Object> model = new HashMap<String, Object>(); 
+		
+		try{
+			MultipartRequest multi = new MultipartRequest(req, REALDIR(), SIZELIMIT(),"euc-kr",new DefaultFileRenamePolicy());
+
+			String cre_id 			= multi.getParameter("cre_id");	
+			String file_title 		= multi.getParameter("file_title");	
+			String file_desc 		= multi.getParameter("file_desc");
+			String view_yn 			= multi.getParameter("view_yn");
+			String originFileName 	= multi.getOriginalFileName("org_file_nm");
+			String ext 				= originFileName.substring(originFileName.lastIndexOf(".")+1);
+			String file_seq 		= multi.getParameter("file_seq");
+
+			if(originFileName == null) {  
+				log.info("파일이 업로드 되지 않았습니다!!");
+			} else {
+				File f = multi.getFile("org_file_nm");
+				int fileSize = (int)f.length();
+				
+				model.put("cre_id", cre_id);
+				model.put("file_title", file_title);
+				model.put("file_desc", file_desc);
+				model.put("view_yn", view_yn);
+				model.put("org_file_nm",originFileName );
+				model.put("svr_file_nm",encoder.encode(originFileName));
+				model.put("svr_dir",REALDIR());  //파일경로
+				model.put("file_size", fileSize);
+				model.put("file_ext", ext );
+				model.put("file_seq", file_seq );
+			}
+				    	
+	    	try{
+	    		getSqlMapClientTemplate().update("zfile.updateAll", model);
+	    	}
+	    	catch(Exception ex){
+	    		result = -1;
+	    	}
+		} catch(Exception ex) {
+			result = -1;
+		} 
+      	
+		return result;  
+	}
+
+    
+    /**
+	 * 상품정보 삭제
+	 * @param req
+	 * @return
+	 * @throws Exception
+	 */
+	public long loanAppFileDelete(HttpServletRequest req) throws Exception 
+	{
+		long result = 1;
+		
+		Map<String, Object> model = new HashMap<String, Object>(); 
+		
+		try{
+			MultipartRequest multi = new MultipartRequest(req, REALDIR(), SIZELIMIT(),"euc-kr",new DefaultFileRenamePolicy());
+
+			String file_seq 		= multi.getParameter("file_seq");
+
+			model.put("file_seq", file_seq );
+				    	
+	    	try{
+	    		getSqlMapClientTemplate().delete("zfile.delete", model);
+	    	}
+	    	catch(Exception ex){
+	    		result = -1;
+	    	}
+		} catch(Exception ex) {
+			result = -1;
+		} 
+      	
+		return result;  
+	}
+	
+	
+	
+	////////////////////////////////////////////////////////////
+	// 고객업무요청 파일업로드 관련
+	////////////////////////////////////////////////////////////
+    public Map<String, Object> loanAppFileViewNew(HttpServletRequest req) throws Exception {
+
+		Map<String, Object> model = new HashMap<String, Object>();
+		HashMap<String, Object> param = convert.toHashMap(req); 
+
+		model.put("file_type", getSqlMapClientTemplate().queryForList("zccode.ComboBox2", "928"));
+
+		return model;
+	}
+    
+    /**
+     *  [파일업로드]
+     *
+     * @param req
+     * @return result
+     * @throws Exception
+     */
+    public Map<String, Object> fileUploadInsertNew(HttpServletRequest req) throws Exception {
+
+		String result = "T";
+		
+		/*
+		String[] test = req.getParameterValues("files");
+		List<MultipartFile> fileList = (List<MultipartFile>) mtfRequest.getFile("files");
+			for(int i=0; i<fileList.size();i++) {
+				MultipartFile multi = fileList.get(i);
+					System.out.println("파일명 : " + multi.getOriginalFilename() + " / 파일 사이즈 : " + multi.getSize());
+			}
+		##test*/	
+		
+		Map<String, Object> model = new HashMap<String, Object>();
+		model.put("file_seq", getSqlMapClientTemplate().queryForObject("zfile.getMaxSeq")); //번호 얻고
+
+		String file_seq = model.get("file_seq").toString();
+		String req_kind = req.getParameter("req_kind");		//01:업무요청, 02:자료요청
+		String curr_year = dateUtil.getYear();				//년도
+		
+		String sep = "\\\\";
+		String file_directory = "";
+		
+		if(System.getProperty("os.name").indexOf("Windows") > -1) {//윈도우면 로컬
+			sep = "\\\\";
+			file_directory = "C:"+sep+"file"+sep+"upload"+sep+"taskreq"+sep+curr_year+req_kind;	//LOCAL
+		} else { //req_kind를 쓰지 않을텐데
+			sep = "/";
+			file_directory = sep+"NAS"+sep+"FILES"+sep+"UPLOAD"+sep+"TASKREQ"+sep+curr_year+req_kind;	//SERVER
+		}
+		
+		
+		
+		/// get param으로 받은 org_file_nm
+		String org_file_nm = req.getParameter("org_file_nm");
+		String svr_file_nm = null;
+		String svr_file_nm_enc = null;
+		//System.out.println("처리전 org_file_nm ["+org_file_nm+"]");
+		
+		if(org_file_nm != null){
+			svr_file_nm = dateUtil.getYearMonthDay()+"_"+dateUtil.getHourMinuteSecond()+org_file_nm.substring(org_file_nm.lastIndexOf("."));
+			//System.out.println("처리전 svr_file_nm ["+svr_file_nm+"]");
+			//암호화 파일명 설정
+			svr_file_nm_enc = svr_file_nm.substring(0, svr_file_nm.lastIndexOf(".")) + "_enc" + svr_file_nm.substring(svr_file_nm.lastIndexOf("."));
+		}
+		///
+
+		log.info("svr_file_nm_enc kbj" + svr_file_nm_enc);
+		try{
+			
+			
+			//디렉토리 생성
+			File file_path = new File(file_directory);
+			
+			//log.info(">>>>>>>>>>>>> file_path="+file_path);
+			//System.out.println(">>>>>>>>>>>>> file_path="+file_path);
+			
+			try {
+				//해당 디렉토리의 존재여부 확인
+				if(!file_path.isDirectory()) {
+					//없다면 생성
+					file_path.mkdirs();
+				}
+			} catch(Exception ex) {
+				System.out.println(">>>>>>>>>>>>> ex>>"+ex);
+				//ex.printStackTrace();
+			}
+			
+			
+			//MultipartRequest multi = new MultipartRequest(req, file_directory, SIZELIMIT(), "euc-kr", new DefaultFileRenamePolicy());
+			MultipartRequest multi = new MultipartRequest(req, file_directory, SIZELIMIT(), "euc-kr" , new DefaultFileRenamePolicy(), svr_file_nm);
+			boolean enc_result = false;
+			String copy_result = "F";
+			
+			try {
+				
+				//CoFileEncDec cofile = new CoFileEncDec();
+				//업로드 된 파일 암호화 진행
+				//enc_result = cofile.encFile(file_directory + sep + svr_file_nm, file_directory + sep + svr_file_nm_enc);
+				//암호화된 파일을 업로드 시 정의된 파일명으로 복사 진행
+				//copy_result = cofile.copyFile(new File(file_directory + sep + svr_file_nm_enc), file_directory + sep + svr_file_nm);
+				
+				System.out.println("enc_result>>" + enc_result+"  >> copy_result>>" + copy_result);
+				
+			} catch(Exception ex) {
+				System.out.println(">>>>>>>>>>>>> ex>>"+ex+" >> enc_result>>" + enc_result+" >> copy_result>>" + copy_result);
+				//ex.printStackTrace();
+			}
+
+			String cre_id 			= multi.getParameter("cre_id");
+			String file_title 		= multi.getParameter("file_title");
+			//String file_desc 		= multi.getParameter("file_desc");
+			String view_yn 			= multi.getParameter("view_yn");
+			String file_type        = multi.getParameter("file_type");
+			String task_seq         = multi.getParameter("task_seq");
+			String originFileName 	= multi.getOriginalFileName("org_file_nm");
+			String file				= multi.getFilesystemName("org_file_nm");
+			String ext 				= originFileName.substring(originFileName.lastIndexOf(".")+1);			
+			
+			if(originFileName == null) {
+				log.info("파일이 업로드 되지 않았습니다!!");
+			} else {
+				File f = multi.getFile("org_file_nm");
+				int fileSize = (int)f.length();
+
+				model.put("file_seq", file_seq);
+				model.put("cre_id", cre_id);
+				model.put("file_title", file_title);
+				//model.put("file_desc", file_desc);
+				model.put("file_desc", "");
+				model.put("view_yn", view_yn);
+				model.put("org_file_nm",originFileName);
+				//model.put("svr_file_nm",encoder.encode(originFileName));
+				model.put("svr_file_nm",file);
+				model.put("svr_dir",file_directory);  //파일경로
+				model.put("file_size", fileSize);
+				model.put("file_ext", ext);
+				model.put("file_type", file_type);
+			}
+
+			model.put("file_seq", file_seq);
+
+			//System.out.println("######## originFileName["+originFileName+"] org_file_nm["+org_file_nm+"] svr_file_nm["+svr_file_nm+"] file["+file+"]");
+			
+	    	try{
+	    		
+	    		// 고객지원수정 팝업 페이지 [파일첨부] task_seq, file_seq
+	    		// TB_SL_TASKREQZFILE 테이블에 insert 한다. 단, task_seq 값이 존재하지 않으면 기존 로직 수행.
+	    		
+	    		if(task_seq != null && !"".equals(task_seq)) {
+	    			
+	    			model.put("seq", task_seq); // task_seq
+	    			
+	    			getSqlMapClientTemplate().insert("cust_minwon.insertFile", model);
+	    			
+	    			getSqlMapClientTemplate().insert("zfile.insertNew", model);
+	    			
+	    		}else{	    		
+	    			
+	    			getSqlMapClientTemplate().insert("zfile.insertNew", model);
+	    			
+	    		}
+	    		
+	    		//화면으로 리턴할 파라미터 : file_seq, name, path, fileNm	    		
+	    		model.put("name", getSqlMapClientTemplate().queryForObject("zfile.selectNm", model));
+	    		model.put("path", file_directory);
+	    		model.put("fileNm", encoder.encode(originFileName));
+	    		
+	    		//System.out.println(">>>>>>>>>>>>> model{}"+model);
+	    	}
+	    	catch(Exception ex){
+	    		result = "F";
+	    		log.error("#fileUploadInsertNew Exception[" + ex + "] ");
+	    	}
+
+		} catch(Exception ex) {
+			result = "F";
+			model.put("file_seq", "0");
+			log.info("# fileUploadInsertNew Exception : "+ex.getMessage());
+		}
+
+		model.put("result", result);
+
+		return model;
+    }
+    
+	public Map<String, Object> loanAppFileDeleteNew(HttpServletRequest req) throws Exception
+	{
+		Map<String, Object> model = new HashMap<String, Object>();
+				
+		try{
+			
+			String[] file_seq = req.getParameterValues("file_seq");
+			String task_seq = req.getParameter("task_seq");
+
+			AmmemberInfo ammemberinfo = (AmmemberInfo)req.getSession().getAttribute("ss_user");						
+			String cre_id = ammemberinfo.getMember_no();
+			
+			int successCnt = 0;
+			int errorCnt = 0;
+			int updateCnt = 0;
+	    		
+    		if(file_seq != null && file_seq.length > 0){
+    			
+    			log.info("######## New 파일첨부 삭제 task_seq ::" + task_seq + " ###############################");
+    			
+    			model.put("cre_id", cre_id);
+    			
+    			for(int i=0; i < file_seq.length; i++){
+    				
+    				try{
+    						    				
+	    				updateCnt = 0;
+						model.put("file_seq", file_seq[i]);
+	    				updateCnt = getSqlMapClientTemplate().update("zfile.updateDelete", model);	    				
+	    				
+    				}catch(Exception e){
+    					errorCnt = errorCnt + 1;
+    				}
+    				successCnt = successCnt + updateCnt;
+    				
+    			}
+    			model.put("message", "삭제 요청 건수 : " +file_seq.length
+				         + " | 성공 건수 : " +successCnt
+				         + " | 에러건수 : "     +errorCnt
+			             );
+    			if(errorCnt > 0){
+    				model.put("rs", "'fail'");
+    			}else{
+    				model.put("rs", "'success'");
+    			}
+    			
+    		}else{
+				model.put("message", "삭제 정상 처리되지 않았습니다.다시 시도하시고 지속적으로 처리되지 않으면 관리자에게 문의하세요.");
+				model.put("rs", "'noMessage'"); //응답 페이지에 스크립트 메시지 보여주지 않기 위해서
+			}	    		
+	    	
+		} catch(Exception ex) {
+			log.info("#Exception>>>>>#####>>"+ ex );		
+			model.put("message", ex.toString());
+			model.put("error", "Message:"+(""+ex).substring(21));
+		}
+
+		return model;
+	}
+	
+		
+	////////////////////////////////////////////////////////////
+	// 고객업무요청 파일업로드 관련
+	////////////////////////////////////////////////////////////
+	public Map<String, Object> loanAppFileView_MW(HttpServletRequest req) throws Exception {
+	
+		Map<String, Object> model = new HashMap<String, Object>();
+		HashMap<String, Object> param = convert.toHashMap(req); 
+		
+		model.put("file_type", getSqlMapClientTemplate().queryForList("zccode.ComboBox2", "928"));
+		
+		return model;
+	}
+	
+	/**
+	*  [파일업로드]
+	*
+	* @param req
+	* @return result
+	* @throws Exception
+	*/
+	public Map<String, Object> fileUploadInsert_MW(HttpServletRequest req) throws Exception {
+	
+		String result = "T";
+		
+		Map<String, Object> model = new HashMap<String, Object>();
+		model.put("file_seq", getSqlMapClientTemplate().queryForObject("zfile.getMaxSeq"));
+		
+		String file_seq = model.get("file_seq").toString();
+		String req_kind = req.getParameter("req_kind");		//01:업무요청, 02:자료요청
+		String curr_year = dateUtil.getYear();				//년도
+		
+		String sep = "\\\\";
+		String file_directory = "";
+		
+		if(System.getProperty("os.name").indexOf("Windows") > -1) {
+		sep = "\\\\";
+		file_directory = "C:"+sep+"file"+sep+"upload"+sep+"taskreq"+sep+curr_year+req_kind;	//LOCAL
+		} else {
+		sep = "/";
+		file_directory = sep+"NAS"+sep+"FILES"+sep+"UPLOAD"+sep+"MINWON"+sep+curr_year+req_kind;	//SERVER
+		}
+		
+		
+		
+		/// get param으로 받은 org_file_nm
+		String org_file_nm = req.getParameter("org_file_nm");
+		String svr_file_nm = null;
+		String svr_file_nm_enc = null;
+		//System.out.println("처리전 org_file_nm ["+org_file_nm+"]");
+		
+		if(org_file_nm != null){
+			svr_file_nm = dateUtil.getYearMonthDay()+"_"+dateUtil.getHourMinuteSecond()+org_file_nm.substring(org_file_nm.lastIndexOf("."));
+			//System.out.println("처리전 svr_file_nm ["+svr_file_nm+"]");
+			//암호화 파일명 설정
+			svr_file_nm_enc = svr_file_nm.substring(0, svr_file_nm.lastIndexOf(".")) + "_enc" + svr_file_nm.substring(svr_file_nm.lastIndexOf("."));
+		}
+		///
+		
+		try{
+				
+				
+				//디렉토리 생성
+				File file_path = new File(file_directory);
+				
+				//log.info(">>>>>>>>>>>>> file_path="+file_path);
+				//System.out.println(">>>>>>>>>>>>> file_path="+file_path);
+				
+				try {
+					//해당 디렉토리의 존재여부 확인
+					if(!file_path.isDirectory()) {
+					//없다면 생성
+						file_path.mkdirs();
+					}
+				} catch(Exception ex) {
+					System.out.println(">>>>>>>>>>>>> ex>>"+ex);
+					//ex.printStackTrace();
+				}
+			
+			
+			//MultipartRequest multi = new MultipartRequest(req, file_directory, SIZELIMIT(), "euc-kr", new DefaultFileRenamePolicy());
+			MultipartRequest multi = new MultipartRequest(req, file_directory, SIZELIMIT(), "euc-kr" , new DefaultFileRenamePolicy(), svr_file_nm);
+			boolean enc_result = false;
+			String copy_result = "F";
+			
+			try {
+				
+				CoFileEncDec cofile = new CoFileEncDec();
+				//업로드 된 파일 암호화 진행
+			//	enc_result = cofile.encFile(file_directory + sep + svr_file_nm, file_directory + sep + svr_file_nm_enc);
+				//암호화된 파일을 업로드 시 정의된 파일명으로 복사 진행
+			//	copy_result = cofile.copyFile(new File(file_directory + sep + svr_file_nm_enc), file_directory + sep + svr_file_nm);
+				
+				//System.out.println("enc_result>>" + enc_result+"  >> copy_result>>" + copy_result);
+				
+			} catch(Exception ex) {
+				System.out.println(">>>>>>>>>>>>> ex>>"+ex+" >> enc_result>>" + enc_result+" >> copy_result>>" + copy_result);
+				//ex.printStackTrace();
+			}
+			
+			String cre_id 			= multi.getParameter("cre_id");
+			String file_title 		= multi.getParameter("file_title");
+			//String file_desc 		= multi.getParameter("file_desc");
+			String view_yn 			= multi.getParameter("view_yn");
+			String file_type        = multi.getParameter("file_type");
+			String cmp_id         = multi.getParameter("cmp_id");
+			String originFileName 	= multi.getOriginalFileName("org_file_nm");
+			String file				= multi.getFilesystemName("org_file_nm");
+			String ext 				= originFileName.substring(originFileName.lastIndexOf(".")+1);			
+			
+			if(originFileName == null) {
+				log.info("파일이 업로드 되지 않았습니다!!");
+			} else {
+				File f = multi.getFile("org_file_nm");
+				int fileSize = (int)f.length();
+				
+				model.put("file_seq", file_seq);
+				model.put("cre_id", cre_id);
+				model.put("file_title", file_title);
+				//model.put("file_desc", file_desc);
+				model.put("file_desc", "");
+				model.put("view_yn", view_yn);
+				model.put("org_file_nm",originFileName);
+				//model.put("svr_file_nm",encoder.encode(originFileName));
+				model.put("svr_file_nm",file);
+				model.put("svr_dir",file_directory);  //파일경로
+				model.put("file_size", fileSize);
+				model.put("file_ext", ext);
+				model.put("file_type", file_type);
+			}
+			
+			model.put("file_seq", file_seq);
+			
+			//System.out.println("######## originFileName["+originFileName+"] org_file_nm["+org_file_nm+"] svr_file_nm["+svr_file_nm+"] file["+file+"]");
+			
+			try{
+				
+				// 고객지원수정 팝업 페이지 [파일첨부] task_seq, file_seq
+				// TB_SL_TASKREQZFILE 테이블에 insert 한다. 단, task_seq 값이 존재하지 않으면 기존 로직 수행.
+				
+				if(cmp_id != null && !"".equals(cmp_id)) {
+				
+					model.put("seq", cmp_id); // task_seq
+					
+					getSqlMapClientTemplate().insert("cust_minwon.insertFile", model);
+					
+					getSqlMapClientTemplate().insert("zfile.insertNew", model);
+				
+				}else{	    		
+				
+					getSqlMapClientTemplate().insert("zfile.insertNew", model);
+				
+				}
+				
+				//화면으로 리턴할 파라미터 : file_seq, name, path, fileNm	    		
+				model.put("name", getSqlMapClientTemplate().queryForObject("zfile.selectNm", model));
+				model.put("path", file_directory);
+				model.put("fileNm", encoder.encode(originFileName));
+				
+				//System.out.println(">>>>>>>>>>>>> model{}"+model);
+			}catch(Exception ex){
+				result = "F";
+				log.error("#fileUploadInsertNew Exception[" + ex + "] ");
+			}
+			
+		} catch(Exception ex) {
+			result = "F";
+			model.put("file_seq", "0");
+			log.info("# fileUploadInsertNew Exception : "+ex.getMessage());
+		}
+	
+		model.put("result", result);
+	
+		return model;
+	}
+	
+	public Map<String, Object> loanAppFileDelete_MW(HttpServletRequest req) throws Exception
+	{
+	Map<String, Object> model = new HashMap<String, Object>();
+	
+	try{
+		
+		String[] file_seq = req.getParameterValues("file_seq");
+		String cmp_id = req.getParameter("cmp_id");
+		
+		AmmemberInfo ammemberinfo = (AmmemberInfo)req.getSession().getAttribute("ss_user");						
+		String cre_id = ammemberinfo.getMember_no();
+		
+		int successCnt = 0;
+		int errorCnt = 0;
+		int updateCnt = 0;
+		
+		if(file_seq != null && file_seq.length > 0){
+			
+			log.info("######## New 파일첨부 삭제 cmp_id ::" + cmp_id + " ###############################");
+			
+			model.put("cre_id", cre_id);
+			
+			for(int i=0; i < file_seq.length; i++){
+				
+				try{
+					
+					updateCnt = 0;
+					model.put("file_seq", file_seq[i]);
+					updateCnt = getSqlMapClientTemplate().update("zfile.updateDelete", model);	    				
+					
+					}catch(Exception e){
+				errorCnt = errorCnt + 1;
+				}
+				successCnt = successCnt + updateCnt;
+				
+			}
+			model.put("message", "삭제 요청 건수 : " +file_seq.length
+			+ " | 성공 건수 : " +successCnt
+			+ " | 에러건수 : "     +errorCnt
+			);
+			if(errorCnt > 0){
+				model.put("rs", "'fail'");
+			}else{
+				model.put("rs", "'success'");
+			}
+			
+		}else{
+			model.put("message", "삭제 정상 처리되지 않았습니다.다시 시도하시고 지속적으로 처리되지 않으면 관리자에게 문의하세요.");
+			model.put("rs", "'noMessage'"); //응답 페이지에 스크립트 메시지 보여주지 않기 위해서
+		}	    		
+		
+	} catch(Exception ex) {
+		log.info("#Exception>>>>>#####>>"+ ex );		
+		model.put("message", ex.toString());
+		model.put("error", "Message:"+(""+ex).substring(21));
+	}
+	
+	return model;
+	}
+}
+

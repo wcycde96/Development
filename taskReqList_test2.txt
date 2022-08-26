@@ -1,0 +1,1276 @@
+<%@ page language="java" contentType="text/html; charset=EUC-KR" pageEncoding="EUC-KR"%>
+<%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
+<%@ taglib prefix="t" uri="/WEB-INF/tld/format.tld" %>
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="EUC-KR">
+<meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+<title>업무 관리 목록</title>
+<link rel="stylesheet" type="text/css" href="${pageContext.request.contextPath }/bootstrap/css/bootstrap.min.css">
+<link rel="stylesheet" type="text/css" href="${pageContext.request.contextPath }/bootstrap/css/bootstrap.custom.css">
+<link rel="stylesheet" type="text/css" href="${pageContext.request.contextPath }/jquery/css/jquery-ui.min.css">
+<link rel="stylesheet" type="text/css" href="${pageContext.request.contextPath }/jquery/css/ui.jqgrid.css">
+<link rel="stylesheet" type="text/css" href="${pageContext.request.contextPath }/jquery/css/jquery.multiselect.css" />
+</head>
+<body>
+<c:set var="defaultOptionText" value="선택" />
+<div id="wrap" style="padding: 5px;">
+
+	<div>
+		<ul id ="tab_ul"class="nav nav-tabs">
+			<li role="presentation" id="T1" class="active" value="T1"><a href="#" onclick="goSearch_T1()">요청목록2</a></li>
+			<li role="presentation" id="T2" value="T2"><a href="#" onclick="goSearch_T2()">요청승인대기 목록</a></li>
+			<li role="presentation" id="T3" value="T3"><a href="#" onclick="goSearch_T3()">접수승인대기 목록</a></li>
+			<li role="presentation"><a href="#" onclick="openTaskReqView();">등록</a></li>
+			<li role="presentation"><a href="#" onclick="openTaskReqCheckerForm();">결재자 등록</a></li>
+			<!-- <li role="presentation"><a href="#" onclick="openTaskIndicators();">등록</a></li> -->
+		</ul>
+	</div>
+	
+	
+	<div id="div_T1">
+		<div>
+			<h4 style="float: left;">■ 검색조건</h4>
+			<div style="text-align: right;">
+			
+				<button type="button" id="button-search_T1" class="btn btn-default">검색</button>
+				<button type="button" id="button-reset_T1" class="btn btn-default">초기화</button>
+				<button type="button" id="button-excel_T1" class="btn btn-default">Excel</button>
+				<!-- <button type="button" id="button-report" class="btn btn-default">일일보고</button> -->
+				<!-- <button type="button" id="button-register" class="btn btn-default">등록</button> -->
+			</div>
+		</div>
+		<div>
+			<form id="formSearch_T1" name="formSearch_T1" method="post">
+			<input type="hidden" name="tablist1" id="tablist1" value="T1">
+				<table class="table" style="margin-bottom: 5px;">
+					<colgroup>
+						<col width="12%" />
+						<col width="38%" />
+						<col width="12%" />
+						<col width="12%" />
+						<col width="12%" />
+						<col width="14%" />
+					</colgroup>
+					<tbody>
+						<tr>
+							<th>업무구분</th>
+							<td>
+								<div class="radio">
+									<label><input type="radio" name="seach_day" value="req_dt" checked="checked">요청일자</label>
+									<!-- <label><input type="radio" name="seach_day" value="rcpt_dt">접수일자</label> -->	
+									<label><input type="radio" name="seach_day" value="end_dt">개발완료일자</label>
+									<label><input type="radio" name="seach_day" value="update_end_dt">반영완료일자</label>	
+								</div>
+							</td>
+							<th>등록일자</th>
+							<td colspan="3">							
+								<input type="text" name="seach_dt_from" id="seach_dt_from" class="form-control input-ssm date" style="width: 100px;" /> ~ <input type="text" name="seach_dt_to" id="seach_dt_to" class="form-control input-ssm date" style="width: 100px;" />
+								<select id="seach_dt_period" class="form-control input-ssm not-search" style="width: 80px;">
+									<option value="TD">당일</option>
+									<option value="YD">전일</option>
+									<option value="1W">주간</option>
+									<option value="1M">월간</option>
+									<option value="TM">당월</option>
+									<option value="LM">전월</option>
+								</select>
+							</td>
+						</tr>
+						<tr>
+							<th>검색조건</th>
+							<td>
+								<select id="seach_title" name="seach_title" class="form-control input-ssm not-search" style="width: 90px;">
+									<option value="req_user_id">요청자ID</option>
+									<option value="req_user_nm" selected="selected">요청자명</option>
+									<option value="req_title">요청제목</option>
+									<option value="req_content">요청상세</option>
+									<option value="proc_content">처리내용</option>
+									<option value="seach_task_seq">요청번호</option>
+								</select>
+								<input type="text" name=seach_text id="seach_text"  class="form-control input-ssm" style="width: 70%;" />
+							</td>
+							<th>처리상태</th>
+							<td>
+								<select name="proc_state_cd" class="not-search" multiple="multiple">
+									<option value="">${defaultOptionText }</option>
+									<c:forEach var="item" items="${Z_924}">
+										<option value="${item.CODE }">${item.NAME }</option>
+									</c:forEach>
+								</select>
+							</td>
+						</tr>
+						<tr>
+							<th>처리구분</th>
+							<td>
+								<select id="range_cd" name="range_cd" class="form-control input-ssm not-search" style="width: 70px;">
+									<option value="">${defaultOptionText }</option>
+									<c:forEach var="item" items="${Z_929}">
+										<c:if test="${item.CODE =='013' || item.CODE =='014'}">
+											<option value="${item.CODE }">${item.NAME }</option>
+										</c:if>
+									</c:forEach>
+								</select>
+							</td>
+							<c:if test="${sessionScope.ss_user.role_cd == '09' || sessionScope.ss_user.role_cd == '08'}">
+								<th>반영완료일자</th>
+								<td>
+									<input type="text" name="update_end_dt_date" id="update_end_dt_date" class="form-control input-ssm date" style="width: 100px;" value="" />
+									
+									<select  style="width: 23%" name="update_end_dt_hour" id="update_end_dt_hour" class="form-control input-ssm">
+									<option value="">${defaultOptionText }</option>
+									<c:set value="" var="SET_HOUR"/>
+									<c:forEach var="item" items="${Z_HOUR }">
+										<option value="${item.CODE}" <c:if test="${SET_HOUR == item.CODE}" >selected="selected" </c:if>>${item.NAME}시</option>
+									</c:forEach>
+									</select>
+									
+									<select style="width: 23%" name="update_end_dt_minute" id="update_end_dt_minute" class="form-control input-ssm">
+										<option value="">${defaultOptionText }</option>
+										<c:set value="" var="SET_MINUTE"/>
+										<c:forEach var="item" items="${Z_MIN }">
+											<option value="${item.CODE}" <c:if test="${SET_MINUTE == item.CODE}" >selected="selected" </c:if>>${item.NAME}분</option>
+										</c:forEach>
+									</select>
+								</td>
+							</c:if>
+						</tr>
+						
+						
+					</tbody>
+				</table>
+				<input type="text" name="copy_object" id="copy_object" style=" width: 1px; height: 1px"/>			
+			</form>
+		</div>
+		<div>
+			<table id="list_T1"></table>
+			<div id="pager_T1"></div>
+		</div>
+	</div>
+	
+	
+	<div id="div_T2">
+		<div>
+			<h4 style="float: left;">■ 검색조건2</h4>
+			<div style="text-align: right;">
+			
+				<button type="button" id="button-search_T2" class="btn btn-default">검색</button>
+				<button type="button" id="button-reset_T2" class="btn btn-default">초기화</button>
+				<button type="button" id="button-excel_T2" class="btn btn-default">Excel</button>
+				<!-- <button type="button" id="button-report" class="btn btn-default">일일보고</button> -->
+				<!-- <button type="button" id="button-register" class="btn btn-default">등록</button> -->
+			</div>
+		</div>
+		<div>
+			<form id="formSearch_T2" name="formSearch_T2" method="post">
+			<input type="hidden" name="tablist2" id="tablist2" value="T2">
+				<table class="table" style="margin-bottom: 5px;">
+					<colgroup>
+						<col width="12%" />
+						<col width="38%" />
+						<col width="12%" />
+						<col width="12%" />
+						<col width="12%" />
+						<col width="14%" />
+					</colgroup>
+					<tbody>
+						<tr>
+							<th>업무구분</th>
+							<td>
+								<div class="radio">
+									<label><input type="radio" name="seach_day" value="req_dt" checked="checked">요청일자</label>
+									<!-- <label><input type="radio" name="seach_day" value="rcpt_dt">접수일자</label> -->	
+									<label><input type="radio" name="seach_day" value="end_dt">개발완료일자</label>
+									<label><input type="radio" name="seach_day" value="update_end_dt">반영완료일자</label>	
+								</div>
+							</td>
+							
+							<th>처리상태</th>
+							<td>
+								<select name="proc_state_cd" class="not-search" multiple="multiple">
+									<option value="">${defaultOptionText }</option>
+									<c:forEach var="item" items="${Z_924}">
+										<option value="${item.CODE }">${item.NAME }</option>
+									</c:forEach>
+								</select>
+							</td>
+							
+						</tr>
+						<tr>
+							<th>검색조건</th>
+							<td>
+								<select id="seach_title" name="seach_title" class="form-control input-ssm not-search" style="width: 90px;">
+									<option value="req_user_id">요청자ID</option>
+									<option value="req_user_nm" selected="selected">요청자명</option>
+									<option value="req_title">요청제목</option>
+									<option value="req_content">요청상세</option>
+									<option value="proc_content">처리내용</option>
+									<option value="seach_task_seq">요청번호</option>
+								</select>
+								<input type="text" name=seach_text id="seach_text"  class="form-control input-ssm" style="width: 70%;" />
+							</td>
+							
+							<th>처리구분</th>
+							<td>
+								<select id="range_cd" name="range_cd" class="form-control input-ssm not-search" style="width: 70px;">
+									<option value="">${defaultOptionText }</option>
+									<c:forEach var="item" items="${Z_929}">
+										<c:if test="${item.CODE =='013' || item.CODE =='014'}">
+											<option value="${item.CODE }">${item.NAME }</option>
+										</c:if>
+									</c:forEach>
+								</select>
+							</td>
+						</tr>						
+					</tbody>
+				</table>
+				<input type="text" name="copy_object" id="copy_object" style=" width: 1px; height: 1px"/>			
+			</form>
+		</div>
+		<div>
+			<table id="list_T2"></table>
+			<div id="pager_T2"></div>
+		</div>
+	</div>
+	
+	
+	<div id="div_T3">
+		<div>
+			<h4 style="float: left;">■ 검색조건3</h4>
+			<div style="text-align: right;">
+			
+				<button type="button" id="button-search_T3" class="btn btn-default">검색</button>
+				<button type="button" id="button-reset_T3" class="btn btn-default">초기화</button>
+				<button type="button" id="button-excel_T3" class="btn btn-default">Excel</button>
+				<!-- <button type="button" id="button-report" class="btn btn-default">일일보고</button> -->
+				<!-- <button type="button" id="button-register" class="btn btn-default">등록</button> -->
+			</div>
+		</div>
+		<div>
+			<form id="formSearch_T3" name="formSearch_T3" method="post">
+			<input type="hidden" name="tablist3" id="tablist3">
+				<table class="table" style="margin-bottom: 5px;">
+					<colgroup>
+						<col width="12%" />
+						<col width="38%" />
+						<col width="12%" />
+						<col width="12%" />
+						<col width="12%" />
+						<col width="14%" />
+					</colgroup>
+					<tbody>
+						<tr>
+							<th>업무구분</th>
+							<td>
+								<div class="radio">
+									<label><input type="radio" name="seach_day" value="req_dt" checked="checked">요청일자</label>
+									<!-- <label><input type="radio" name="seach_day" value="rcpt_dt">접수일자</label> -->	
+									<label><input type="radio" name="seach_day" value="end_dt">개발완료일자</label>
+									<label><input type="radio" name="seach_day" value="update_end_dt">반영완료일자</label>	
+								</div>
+							</td>
+							<th>처리상태</th>
+							<td>
+								<select name="proc_state_cd" class="not-search" multiple="multiple">
+									<option value="">${defaultOptionText }</option>
+									<c:forEach var="item" items="${Z_924}">
+										<option value="${item.CODE }">${item.NAME }</option>
+									</c:forEach>
+								</select>
+							</td>
+						</tr>
+						<tr>
+							<th>검색조건</th>
+							<td>
+								<select id="seach_title" name="seach_title" class="form-control input-ssm not-search" style="width: 90px;">
+									<option value="req_user_id">요청자ID</option>
+									<option value="req_user_nm" selected="selected">요청자명</option>
+									<option value="req_title">요청제목</option>
+									<option value="req_content">요청상세</option>
+									<option value="proc_content">처리내용</option>
+									<option value="seach_task_seq">요청번호</option>
+								</select>
+								<input type="text" name=seach_text id="seach_text"  class="form-control input-ssm" style="width: 70%;" />
+							</td>
+							
+							<th>처리구분</th>
+							<td>
+								<select id="range_cd" name="range_cd" class="form-control input-ssm not-search" style="width: 70px;">
+									<option value="">${defaultOptionText }</option>
+									<c:forEach var="item" items="${Z_929}">
+										<c:if test="${item.CODE =='013' || item.CODE =='014'}">
+											<option value="${item.CODE }">${item.NAME }</option>
+										</c:if>
+									</c:forEach>
+								</select>
+							</td>
+						</tr>
+						
+						
+					</tbody>
+				</table>
+				<input type="text" name="copy_object" id="copy_object" style=" width: 1px; height: 1px"/>			
+			</form>
+		</div>
+		<div>
+			<table id="list_T3"></table>
+			<div id="pager_T3"></div>
+		</div>
+	</div>
+	
+</div>
+	<script type="text/javascript" src="${pageContext.request.contextPath }/jquery/js/jquery-1.11.2.min.js"></script>
+	<script type="text/javascript" src="${pageContext.request.contextPath }/jquery/js/jquery-ui.min.js"></script>
+	<script type="text/javascript" src="${pageContext.request.contextPath }/jquery/js/jquery.ui.datepicker-ko.js"></script>
+	<script type="text/javascript" src="${pageContext.request.contextPath }/jquery/js/jquery.jqGrid.min.js"></script>
+	<script type="text/javascript" src="${pageContext.request.contextPath }/jquery/js/grid.locale-kr.js"></script>
+	<script type="text/javascript" src="${pageContext.request.contextPath }/jquery/js/jquery.mask.min.js"></script>
+	<script type="text/javascript" src="${pageContext.request.contextPath }/jquery/js/jquery.multiselect.min.js"></script>
+	<script type="text/javascript" src="${pageContext.request.contextPath }/js/format.js"></script>
+	<script type="text/javascript">
+
+
+	//########################################################################################################################## clear
+		$(document).ready(function() { 
+			$("#list_T1").jqGrid({
+				datatype: "local",	//local
+				mtype: "post",
+				multiselect:false,	//true:checkbox
+				colNames: [
+					"요청번호",
+					"처리구분",
+					"요청일시",
+					"요청자",
+					"요청제목",
+					"처리상태",
+					"접수자",
+					"접수일자",
+					"요청>접수",
+					"개발시작일자",
+					"접수>개발시작",
+					"반영완료일자",
+					"개발시작>반영",
+					"요청>반영",
+					"처리자",
+				],
+				colModel: [
+					{ name: "TASK_SEQ", index: "TASK_SEQ",align: "center", formatter: function(value, options, rowObject) {//요청번호
+						
+						var REPLACE_REQ_TITLE = rowObject.REQ_TITLE;
+						if(REPLACE_REQ_TITLE != null){
+							REPLACE_REQ_TITLE = REPLACE_REQ_TITLE.replace(/'/gi, "").replace(/"/gi, "");
+						}
+						return "<strong><a href=\"javascript:copyToClipboard('" + rowObject.TASK_SEQ + "' , '" + REPLACE_REQ_TITLE + "', '" + rowObject.REQ_USER_NM + "')\">" + value + "</a></strong>";
+					}}, 
+					{ name: "RANGE_NM", index: "RANGE_NM",align: "center" }, //처리구분
+					{ name: "REQ_DT", index: "REQ_DT",align: "center", width: 190 , formatter: format.datime4}, //요청일시
+					{ name: "REQ_USER_NM", index: "REQ_USER_NM",align: "center" }, //요청자
+					
+					
+					{ name: "REQ_TITLE", index: "REQ_TITLE", formatter: function(value, options, rowObject) {//요청제목
+						var res1; // 사전요청/ 즉시요청
+						var res2;
+						if(rowObject.PROCESS_CD=="N"){
+								res1 ="<font color='blue'>(즉시요청)</font>";
+							}else{res1="";}
+						if(rowObject.FOR_TEST_YN=="Y"){
+								res2 ="<font color='red'>(중요)</font>";
+							}else{res2="";}
+						if(rowObject.RCPT_ADMIN_NO == "99923" && '${sessionScope.ss_user.member_ip}' =="192.168.0.176"){//김광진
+							return "<strong>"+res2+res1+"<a href=\"javascript:openTaskReqView('" + rowObject.TASK_SEQ + "')\"><font color=\"green\">" + value + "</font></a></strong>";
+						}else if(rowObject.RCPT_ADMIN_NO == "99924" && '${sessionScope.ss_user.member_ip}' =="192.168.0.37"){//김법재
+							return "<strong>"+res2+res1+"<a href=\"javascript:openTaskReqView('" + rowObject.TASK_SEQ + "')\"><font color=\"green\">" + value + "</font></a></strong>";
+						}else if(rowObject.RCPT_ADMIN_NO == "99921" && '${sessionScope.ss_user.member_ip}' =="192.168.0.81"){//이재훈
+							return "<strong>"+res2+res1+"<a href=\"javascript:openTaskReqView('" + rowObject.TASK_SEQ + "')\"><font color=\"green\">" + value + "</font></a></strong>";
+						}else if(rowObject.RCPT_ADMIN_NO == "99924" && '${sessionScope.ss_user.member_ip}' =="127.0.0.1"){//테스트 김법재
+							return "<strong>"+res2+res1+"<a href=\"javascript:openTaskReqView('" + rowObject.TASK_SEQ + "')\"><font color=\"green\">" + value + "</font></a></strong>";
+						}else if(rowObject.RCPT_ADMIN_NO == "99927" && '${sessionScope.ss_user.member_ip}' =="192.168.0.166"){//이우철
+							return "<strong>"+res2+res1+"<a href=\"javascript:openTaskReqView('" + rowObject.TASK_SEQ + "')\"><font color=\"green\">" + value + "</font></a></strong>";
+						}else if(rowObject.RCPT_ADMIN_NO == "99925" && '${sessionScope.ss_user.member_ip}' =="192.168.0.50"){//정현아
+							return "<strong>"+res2+res1+"<a href=\"javascript:openTaskReqView('" + rowObject.TASK_SEQ + "')\"><font color=\"green\">" + value + "</font></a></strong>";
+						}else if(rowObject.RCPT_ADMIN_NO == "99928" && '${sessionScope.ss_user.member_ip}' =="192.168.0.185"){//황상혁
+							return "<strong>"+res2+res1+"<a href=\"javascript:openTaskReqView('" + rowObject.TASK_SEQ + "')\"><font color=\"green\">" + value + "</font></a></strong>";
+						}else if(rowObject.RCPT_ADMIN_NO == "99929" && '${sessionScope.ss_user.member_ip}' =="192.168.0.75"){//유승윤
+							return "<strong>"+res2+res1+"<a href=\"javascript:openTaskReqView('" + rowObject.TASK_SEQ + "')\"><font color=\"green\">" + value + "</font></a></strong>";
+						}else if(rowObject.RCPT_ADMIN_NO == "99930" && '${sessionScope.ss_user.member_ip}' =="192.168.0.120"){//박정현
+							return "<strong>"+res2+res1+"<a href=\"javascript:openTaskReqView('" + rowObject.TASK_SEQ + "')\"><font color=\"green\">" + value + "</font></a></strong>";
+						}
+						else{
+							return "<strong>"+res2+res1+"<a href=\"javascript:openTaskReqView('" + rowObject.TASK_SEQ + "')\">" + value + "</a></strong>";
+						}
+					}, width: 400, align: "left" },
+					{ name: "PROC_STATE_NM", index: "PROC_STATE_NM",align: "center", formatter: function(value, options, rowObject) {//처리상태
+						if(rowObject.PROC_STATE_CD == "010" || rowObject.PROC_STATE_CD == "020"){
+							return "<a href=\"javascript:taskReqListChgState('" + rowObject.TASK_SEQ + "','" + rowObject.REQ_USER_NM + "','" + rowObject.REQ_USER_NO + "','" + rowObject.PROC_STATE_CD + "','" + rowObject.RCPT_DT + "')\"><font color=\"blue\">" + value + "</font></a>";	  
+						}else if(rowObject.PROC_STATE_CD == "019"||rowObject.PROC_STATE_CD == "023"){
+							return "<a href=\"javascript:taskReqListChgState('" + rowObject.TASK_SEQ + "','" + rowObject.REQ_USER_NM + "','" + rowObject.REQ_USER_NO + "','" + rowObject.PROC_STATE_CD + "','" + rowObject.RCPT_DT + "')\"><font color=\"red\">" + value + "</font></a>";
+						}else if(rowObject.PROC_STATE_CD == "017"){
+							return "<a href=\"javascript:taskReqListChgState('" + rowObject.TASK_SEQ + "','" + rowObject.REQ_USER_NM + "','" + rowObject.REQ_USER_NO + "','" + rowObject.PROC_STATE_CD + "','" + rowObject.RCPT_DT + "')\"><font color=\"green\">" + value + "</font></a>";
+						}
+						else{
+							return rowObject.PROC_STATE_NM;
+						}
+						
+					}, width: 150, align: "left" },
+					{ name: "RCPT_ADMIN_NM", index: "RCPT_ADMIN_NM",align: "center", width: 130, formatter: function(value, options, rowObject) { //접수자
+						if(rowObject.RCPT_ADMIN_NO == "99923" && '${sessionScope.ss_user.member_ip}' =="192.168.0.176"){//김광진
+							return "<font color=\"green\">" + rowObject.RCPT_ADMIN_NM + "</font></a></strong>";	  
+						}else if(rowObject.RCPT_ADMIN_NO == "99924" && '${sessionScope.ss_user.member_ip}' =="192.168.0.37"){//김법재
+							return "<font color=\"green\">" + rowObject.RCPT_ADMIN_NM + "</font></a></strong>";	  
+						}else if(rowObject.RCPT_ADMIN_NO == "99921" && '${sessionScope.ss_user.member_ip}' =="192.168.0.81"){//이재훈
+							return "<font color=\"green\">" + rowObject.RCPT_ADMIN_NM + "</font></a></strong>";	  
+						}else if(rowObject.RCPT_ADMIN_NO == "99924" && '${sessionScope.ss_user.member_ip}' =="127.0.0.1"){//테스트 김법재
+							return "<font color=\"green\">" + rowObject.RCPT_ADMIN_NM + "</font></a></strong>";	  
+						}else if(rowObject.RCPT_ADMIN_NO == "99927" && '${sessionScope.ss_user.member_ip}' =="192.168.0.166"){//이우철
+							return "<font color=\"green\">" + rowObject.RCPT_ADMIN_NM + "</font></a></strong>";	  
+						}else if(rowObject.RCPT_ADMIN_NO == "99925" && '${sessionScope.ss_user.member_ip}' =="192.168.0.50"){//정현아
+							return "<font color=\"green\">" + rowObject.RCPT_ADMIN_NM + "</font></a></strong>";	  
+						}else if(rowObject.RCPT_ADMIN_NO == "99928" && '${sessionScope.ss_user.member_ip}' =="192.168.0.185"){//황상혁
+							return "<font color=\"green\">" + rowObject.RCPT_ADMIN_NM + "</font></a></strong>";	  
+						}else if(rowObject.RCPT_ADMIN_NO == "99929" && '${sessionScope.ss_user.member_ip}' =="192.168.0.75"){//유승윤
+							return "<font color=\"green\">" + rowObject.RCPT_ADMIN_NM + "</font></a></strong>";	  
+						}else if(rowObject.RCPT_ADMIN_NO == "99930" && '${sessionScope.ss_user.member_ip}' =="192.168.0.120"){//박정현
+							return "<font color=\"green\">" + rowObject.RCPT_ADMIN_NM + "</font></a></strong>";	  
+						}else{
+							return rowObject.RCPT_ADMIN_NM;
+						}
+					}},
+					{ name: "RCPT_DT", index: "RCPT_DT",align: "center", formatter: format.date, width: 130 }, //접수일자
+					{ name: "REQ_RCPT_DAY", index: "REQ_RCPT_DAY",align: "center", width: 130, formatter: function(value, options, rowObject) { //요청>접수
+						if(rowObject.REQ_RCPT_DAY == null){
+							return '';
+						}else{
+							return rowObject.REQ_RCPT_DAY+' 일';	
+						}
+						
+					}},
+					{ name: "START_DT", index: "START_DT",align: "center", formatter: format.date, width: 150 }, //개발시작일자
+					{ name: "RCPT_START_DAY", index: "RCPT_START_DAY",align: "center", formatter: function(value, options, rowObject) { // 접수>개발시작
+						if(rowObject.RCPT_START_DAY == null){
+							return '';
+						}else{
+							return rowObject.RCPT_START_DAY+' 일';	
+						}
+					}},
+					{ name: "UPDATE_END_DT", index: "UPDATE_END_DT",align: "center",formatter: format.date, width: 160 }, //반영완료일자
+					{ name: "START_UPDATE_END_DAY", index: "START_UPDATE_END_DAY",align: "center", formatter: function(value, options, rowObject) { //개발시작>반영
+						if(rowObject.START_UPDATE_END_DAY == null){
+							return '';
+						}else{
+							return rowObject.START_UPDATE_END_DAY+' 일';	
+						}
+					}},
+					{ name: "REQ_UPDATE_END_DAY", index: "REQ_UPDATE_END_DAY",align: "center", formatter: function(value, options, rowObject) { //요청>반영
+						if(rowObject.REQ_UPDATE_END_DAY == null){
+							return '';
+						}else{
+							return rowObject.REQ_UPDATE_END_DAY+' 일';	
+						}
+					}},
+					{ name: "PROC_ADMIN_NM", index: "PROC_ADMIN_NM" , width: 100} //처리자
+				],
+				
+				//cmTemplate: { align: "center" },
+				autowidth: true,
+				height: 400,
+				viewrecords: true,
+				gridview: true,
+				rowNum: 20,
+				rownumbers: true,
+				pager: "#pager_T1",
+				rowList: [20, 50, 100, 200],
+				sortorder: "DESC",
+				sortname: "TASK_SEQ"
+			});
+
+
+			$("#list_T2").jqGrid({
+				datatype: "local",	//local
+				mtype: "post",
+				multiselect:false,	//true:checkbox
+				colNames: [
+					"요청번호",
+					"처리구분",
+					"요청일시",
+					"요청자",
+					"요청제목",
+					"처리상태",
+					"접수자",
+					"접수일자",
+					"요청>접수",
+					"개발시작일자",
+					"접수>개발시작",
+					"반영완료일자",
+					"개발시작>반영",
+					"요청>반영",
+					"처리자",
+				],
+				colModel: [
+					{ name: "TASK_SEQ", index: "TASK_SEQ",align: "center", formatter: function(value, options, rowObject) {//요청번호
+						
+						var REPLACE_REQ_TITLE = rowObject.REQ_TITLE;
+						if(REPLACE_REQ_TITLE != null){
+							REPLACE_REQ_TITLE = REPLACE_REQ_TITLE.replace(/'/gi, "").replace(/"/gi, "");
+						}
+						return "<strong><a href=\"javascript:copyToClipboard('" + rowObject.TASK_SEQ + "' , '" + REPLACE_REQ_TITLE + "', '" + rowObject.REQ_USER_NM + "')\">" + value + "</a></strong>";
+					}}, 
+					{ name: "RANGE_NM", index: "RANGE_NM",align: "center" }, //처리구분
+					{ name: "REQ_DT", index: "REQ_DT",align: "center", width: 190 , formatter: format.datime4}, //요청일시
+					{ name: "REQ_USER_NM", index: "REQ_USER_NM",align: "center" }, //요청자
+					
+					
+					{ name: "REQ_TITLE", index: "REQ_TITLE", formatter: function(value, options, rowObject) {//요청제목
+						var result
+						if(rowObject.PROCESS_CD=="N"){
+								result ="<font color='red'>(즉시)</font>";
+							}else{result="";}
+						if(rowObject.RCPT_ADMIN_NO == "99923" && '${sessionScope.ss_user.member_ip}' =="192.168.0.176"){//김광진
+							return "<strong>"+result+"<a href=\"javascript:openTaskReqView('" + rowObject.TASK_SEQ + "')\"><font color=\"green\">" + value + "</font></a></strong>";
+						}else if(rowObject.RCPT_ADMIN_NO == "99924" && '${sessionScope.ss_user.member_ip}' =="192.168.0.37"){//김법재
+							return "<strong>"+result+"<a href=\"javascript:openTaskReqView('" + rowObject.TASK_SEQ + "')\"><font color=\"green\">" + value + "</font></a></strong>";
+						}else if(rowObject.RCPT_ADMIN_NO == "99921" && '${sessionScope.ss_user.member_ip}' =="192.168.0.81"){//이재훈
+							return "<strong>"+result+"<a href=\"javascript:openTaskReqView('" + rowObject.TASK_SEQ + "')\"><font color=\"green\">" + value + "</font></a></strong>";
+						}else if(rowObject.RCPT_ADMIN_NO == "99924" && '${sessionScope.ss_user.member_ip}' =="127.0.0.1"){//테스트 김법재
+							return "<strong>"+result+"<a href=\"javascript:openTaskReqView('" + rowObject.TASK_SEQ + "')\"><font color=\"green\">" + value + "</font></a></strong>";
+						}else if(rowObject.RCPT_ADMIN_NO == "99927" && '${sessionScope.ss_user.member_ip}' =="192.168.0.166"){//이우철
+							return "<strong>"+result+"<a href=\"javascript:openTaskReqView('" + rowObject.TASK_SEQ + "')\"><font color=\"green\">" + value + "</font></a></strong>";
+						}else if(rowObject.RCPT_ADMIN_NO == "99925" && '${sessionScope.ss_user.member_ip}' =="192.168.0.50"){//정현아
+							return "<strong>"+result+"<a href=\"javascript:openTaskReqView('" + rowObject.TASK_SEQ + "')\"><font color=\"green\">" + value + "</font></a></strong>";
+						}else if(rowObject.RCPT_ADMIN_NO == "99928" && '${sessionScope.ss_user.member_ip}' =="192.168.0.185"){//황상혁
+							return "<strong>"+result+"<a href=\"javascript:openTaskReqView('" + rowObject.TASK_SEQ + "')\"><font color=\"green\">" + value + "</font></a></strong>";
+						}
+						else{
+							return "<strong>"+result+"<a href=\"javascript:openTaskReqView('" + rowObject.TASK_SEQ + "')\">" + value + "</a></strong>";
+						}
+					}, width: 400, align: "left" },
+					{ name: "PROC_STATE_NM", index: "PROC_STATE_NM",align: "center", formatter: function(value, options, rowObject) {//처리상태
+						if(rowObject.PROC_STATE_CD == "000" || rowObject.PROC_STATE_CD == "010" || rowObject.PROC_STATE_CD == "014" || rowObject.PROC_STATE_CD == "015" || rowObject.PROC_STATE_CD == "016" ){
+							return "<strong><a href=\"javascript:taskReqListChgState('" + rowObject.TASK_SEQ + "','" + rowObject.REQ_USER_NM + "','" + rowObject.REQ_USER_NO + "','" + rowObject.PROC_STATE_CD + "','" + rowObject.RCPT_DT + "')\"><font color=\"blue\">" + value + "</font></a></strong>";	  
+						}else if(rowObject.PROC_STATE_CD == "001"){
+							return "<strong><a href=\"javascript:taskReqListChgState('" + rowObject.TASK_SEQ + "','" + rowObject.REQ_USER_NM + "','" + rowObject.REQ_USER_NO + "','" + rowObject.PROC_STATE_CD + "','" + rowObject.RCPT_DT + "')\"><font color=\"red\">" + value + "</font></a></strong>";
+						}else{
+							return rowObject.PROC_STATE_NM;
+						}
+						
+					}, width: 150, align: "left" },
+					{ name: "RCPT_ADMIN_NM", index: "RCPT_ADMIN_NM",align: "center", width: 130, formatter: function(value, options, rowObject) { //접수자
+						if(rowObject.RCPT_ADMIN_NO == "99923" && '${sessionScope.ss_user.member_ip}' =="192.168.0.176"){//김광진
+							return "<font color=\"green\">" + rowObject.RCPT_ADMIN_NM + "</font></a></strong>";	  
+						}else if(rowObject.RCPT_ADMIN_NO == "99924" && '${sessionScope.ss_user.member_ip}' =="192.168.0.37"){//김법재
+							return "<font color=\"green\">" + rowObject.RCPT_ADMIN_NM + "</font></a></strong>";	  
+						}else if(rowObject.RCPT_ADMIN_NO == "99921" && '${sessionScope.ss_user.member_ip}' =="192.168.0.81"){//이재훈
+							return "<font color=\"green\">" + rowObject.RCPT_ADMIN_NM + "</font></a></strong>";	  
+						}else if(rowObject.RCPT_ADMIN_NO == "99924" && '${sessionScope.ss_user.member_ip}' =="127.0.0.1"){//테스트 김법재
+							return "<font color=\"green\">" + rowObject.RCPT_ADMIN_NM + "</font></a></strong>";	  
+						}else if(rowObject.RCPT_ADMIN_NO == "99927" && '${sessionScope.ss_user.member_ip}' =="192.168.0.166"){//이우철
+							return "<font color=\"green\">" + rowObject.RCPT_ADMIN_NM + "</font></a></strong>";	  
+						}else if(rowObject.RCPT_ADMIN_NO == "99925" && '${sessionScope.ss_user.member_ip}' =="192.168.0.50"){//정현아
+							return "<font color=\"green\">" + rowObject.RCPT_ADMIN_NM + "</font></a></strong>";	  
+						}else if(rowObject.RCPT_ADMIN_NO == "99928" && '${sessionScope.ss_user.member_ip}' =="192.168.0.185"){//황상혁
+							return "<font color=\"green\">" + rowObject.RCPT_ADMIN_NM + "</font></a></strong>";	  
+						}else{
+							return rowObject.RCPT_ADMIN_NM;
+						}
+					}},
+					{ name: "RCPT_DT", index: "RCPT_DT",align: "center", formatter: format.date, width: 130 }, //접수일자
+					{ name: "REQ_RCPT_DAY", index: "REQ_RCPT_DAY",align: "center", width: 130, formatter: function(value, options, rowObject) { //요청>접수
+						if(rowObject.REQ_RCPT_DAY == null){
+							return '';
+						}else{
+							return rowObject.REQ_RCPT_DAY+' 일';	
+						}
+						
+					}},
+					{ name: "START_DT", index: "START_DT",align: "center", formatter: format.date, width: 150 }, //개발시작일자
+					{ name: "RCPT_START_DAY", index: "RCPT_START_DAY",align: "center", formatter: function(value, options, rowObject) { // 접수>개발시작
+						if(rowObject.RCPT_START_DAY == null){
+							return '';
+						}else{
+							return rowObject.RCPT_START_DAY+' 일';	
+						}
+					}},
+					{ name: "UPDATE_END_DT", index: "UPDATE_END_DT",align: "center",formatter: format.date, width: 160 }, //반영완료일자
+					{ name: "START_UPDATE_END_DAY", index: "START_UPDATE_END_DAY",align: "center", formatter: function(value, options, rowObject) { //개발시작>반영
+						if(rowObject.START_UPDATE_END_DAY == null){
+							return '';
+						}else{
+							return rowObject.START_UPDATE_END_DAY+' 일';	
+						}
+					}},
+					{ name: "REQ_UPDATE_END_DAY", index: "REQ_UPDATE_END_DAY",align: "center", formatter: function(value, options, rowObject) { //요청>반영
+						if(rowObject.REQ_UPDATE_END_DAY == null){
+							return '';
+						}else{
+							return rowObject.REQ_UPDATE_END_DAY+' 일';	
+						}
+					}},
+					{ name: "PROC_ADMIN_NM", index: "PROC_ADMIN_NM" , width: 100} //처리자
+				],
+				
+				//cmTemplate: { align: "center" },
+				autowidth: true,
+				height: 400,
+				viewrecords: true,
+				gridview: true,
+				rowNum: 20,
+				rownumbers: true,
+				pager: "#pager_T2",
+				rowList: [20, 50, 100, 200],
+				sortorder: "DESC",
+				sortname: "TASK_SEQ"
+			});
+
+			//T3
+			$("#list_T3").jqGrid({
+				datatype: "local",	//local
+				mtype: "post",
+				multiselect:false,	//true:checkbox
+				colNames: [
+					"요청번호",
+					"처리구분",
+					"요청일시",
+					"요청자",
+					"요청제목",
+					"처리상태",
+					"접수자",
+					"접수일자",
+					"요청>접수",
+					"개발시작일자",
+					"접수>개발시작",
+					"반영완료일자",
+					"개발시작>반영",
+					"요청>반영",
+					"처리자",
+				],
+				colModel: [
+					{ name: "TASK_SEQ", index: "TASK_SEQ",align: "center", formatter: function(value, options, rowObject) {//요청번호
+						
+						var REPLACE_REQ_TITLE = rowObject.REQ_TITLE;
+						if(REPLACE_REQ_TITLE != null){
+							REPLACE_REQ_TITLE = REPLACE_REQ_TITLE.replace(/'/gi, "").replace(/"/gi, "");
+						}
+						return "<strong><a href=\"javascript:copyToClipboard('" + rowObject.TASK_SEQ + "' , '" + REPLACE_REQ_TITLE + "', '" + rowObject.REQ_USER_NM + "')\">" + value + "</a></strong>";
+					}}, 
+					{ name: "RANGE_NM", index: "RANGE_NM",align: "center" }, //처리구분
+					{ name: "REQ_DT", index: "REQ_DT",align: "center", width: 190 , formatter: format.datime4}, //요청일시
+					{ name: "REQ_USER_NM", index: "REQ_USER_NM",align: "center" }, //요청자
+					
+					
+					{ name: "REQ_TITLE", index: "REQ_TITLE", formatter: function(value, options, rowObject) {//요청제목
+						var result
+						if(rowObject.PROCESS_CD=="N"){
+								result ="<font color='red'>(즉시)</font>";
+							}else{result="";}
+						if(rowObject.RCPT_ADMIN_NO == "99923" && '${sessionScope.ss_user.member_ip}' =="192.168.0.176"){//김광진
+							return "<strong>"+result+"<a href=\"javascript:openTaskReqView('" + rowObject.TASK_SEQ + "')\"><font color=\"green\">" + value + "</font></a></strong>";
+						}else if(rowObject.RCPT_ADMIN_NO == "99924" && '${sessionScope.ss_user.member_ip}' =="192.168.0.37"){//김법재
+							return "<strong>"+result+"<a href=\"javascript:openTaskReqView('" + rowObject.TASK_SEQ + "')\"><font color=\"green\">" + value + "</font></a></strong>";
+						}else if(rowObject.RCPT_ADMIN_NO == "99921" && '${sessionScope.ss_user.member_ip}' =="192.168.0.81"){//이재훈
+							return "<strong>"+result+"<a href=\"javascript:openTaskReqView('" + rowObject.TASK_SEQ + "')\"><font color=\"green\">" + value + "</font></a></strong>";
+						}else if(rowObject.RCPT_ADMIN_NO == "99924" && '${sessionScope.ss_user.member_ip}' =="127.0.0.1"){//테스트 김법재
+							return "<strong>"+result+"<a href=\"javascript:openTaskReqView('" + rowObject.TASK_SEQ + "')\"><font color=\"green\">" + value + "</font></a></strong>";
+						}else if(rowObject.RCPT_ADMIN_NO == "99927" && '${sessionScope.ss_user.member_ip}' =="192.168.0.166"){//이우철
+							return "<strong>"+result+"<a href=\"javascript:openTaskReqView('" + rowObject.TASK_SEQ + "')\"><font color=\"green\">" + value + "</font></a></strong>";
+						}else if(rowObject.RCPT_ADMIN_NO == "99925" && '${sessionScope.ss_user.member_ip}' =="192.168.0.50"){//정현아
+							return "<strong>"+result+"<a href=\"javascript:openTaskReqView('" + rowObject.TASK_SEQ + "')\"><font color=\"green\">" + value + "</font></a></strong>";
+						}else if(rowObject.RCPT_ADMIN_NO == "99928" && '${sessionScope.ss_user.member_ip}' =="192.168.0.185"){//황상혁
+							return "<strong>"+result+"<a href=\"javascript:openTaskReqView('" + rowObject.TASK_SEQ + "')\"><font color=\"green\">" + value + "</font></a></strong>";
+						}
+						else{
+							return "<strong>"+result+"<a href=\"javascript:openTaskReqView('" + rowObject.TASK_SEQ + "')\">" + value + "</a></strong>";
+						}
+					}, width: 400, align: "left" },
+					{ name: "PROC_STATE_NM", index: "PROC_STATE_NM",align: "center", formatter: function(value, options, rowObject) {//처리상태
+						if(rowObject.PROC_STATE_CD == "000" || rowObject.PROC_STATE_CD == "010" || rowObject.PROC_STATE_CD == "014" || rowObject.PROC_STATE_CD == "015" || rowObject.PROC_STATE_CD == "016" ){
+							return "<strong><a href=\"javascript:taskReqListChgState('" + rowObject.TASK_SEQ + "','" + rowObject.REQ_USER_NM + "','" + rowObject.REQ_USER_NO + "','" + rowObject.PROC_STATE_CD + "','" + rowObject.RCPT_DT + "')\"><font color=\"blue\">" + value + "</font></a></strong>";	  
+						}else if(rowObject.PROC_STATE_CD == "001"){
+							return "<strong><a href=\"javascript:taskReqListChgState('" + rowObject.TASK_SEQ + "','" + rowObject.REQ_USER_NM + "','" + rowObject.REQ_USER_NO + "','" + rowObject.PROC_STATE_CD + "','" + rowObject.RCPT_DT + "')\"><font color=\"red\">" + value + "</font></a></strong>";
+						}else{
+							return rowObject.PROC_STATE_NM;
+						}
+						
+					}, width: 150, align: "left" },
+					{ name: "RCPT_ADMIN_NM", index: "RCPT_ADMIN_NM",align: "center", width: 130, formatter: function(value, options, rowObject) { //접수자
+						if(rowObject.RCPT_ADMIN_NO == "99923" && '${sessionScope.ss_user.member_ip}' =="192.168.0.176"){//김광진
+							return "<font color=\"green\">" + rowObject.RCPT_ADMIN_NM + "</font></a></strong>";	  
+						}else if(rowObject.RCPT_ADMIN_NO == "99924" && '${sessionScope.ss_user.member_ip}' =="192.168.0.37"){//김법재
+							return "<font color=\"green\">" + rowObject.RCPT_ADMIN_NM + "</font></a></strong>";	  
+						}else if(rowObject.RCPT_ADMIN_NO == "99921" && '${sessionScope.ss_user.member_ip}' =="192.168.0.81"){//이재훈
+							return "<font color=\"green\">" + rowObject.RCPT_ADMIN_NM + "</font></a></strong>";	  
+						}else if(rowObject.RCPT_ADMIN_NO == "99924" && '${sessionScope.ss_user.member_ip}' =="127.0.0.1"){//테스트 김법재
+							return "<font color=\"green\">" + rowObject.RCPT_ADMIN_NM + "</font></a></strong>";	  
+						}else if(rowObject.RCPT_ADMIN_NO == "99927" && '${sessionScope.ss_user.member_ip}' =="192.168.0.166"){//이우철
+							return "<font color=\"green\">" + rowObject.RCPT_ADMIN_NM + "</font></a></strong>";	  
+						}else if(rowObject.RCPT_ADMIN_NO == "99925" && '${sessionScope.ss_user.member_ip}' =="192.168.0.50"){//정현아
+							return "<font color=\"green\">" + rowObject.RCPT_ADMIN_NM + "</font></a></strong>";	  
+						}else if(rowObject.RCPT_ADMIN_NO == "99928" && '${sessionScope.ss_user.member_ip}' =="192.168.0.185"){//황상혁
+							return "<font color=\"green\">" + rowObject.RCPT_ADMIN_NM + "</font></a></strong>";	  
+						}else{
+							return rowObject.RCPT_ADMIN_NM;
+						}
+					}},
+					{ name: "RCPT_DT", index: "RCPT_DT",align: "center", formatter: format.date, width: 130 }, //접수일자
+					{ name: "REQ_RCPT_DAY", index: "REQ_RCPT_DAY",align: "center", width: 130, formatter: function(value, options, rowObject) { //요청>접수
+						if(rowObject.REQ_RCPT_DAY == null){
+							return '';
+						}else{
+							return rowObject.REQ_RCPT_DAY+' 일';	
+						}
+						
+					}},
+					{ name: "START_DT", index: "START_DT",align: "center", formatter: format.date, width: 150 }, //개발시작일자
+					{ name: "RCPT_START_DAY", index: "RCPT_START_DAY",align: "center", formatter: function(value, options, rowObject) { // 접수>개발시작
+						if(rowObject.RCPT_START_DAY == null){
+							return '';
+						}else{
+							return rowObject.RCPT_START_DAY+' 일';	
+						}
+					}},
+					{ name: "UPDATE_END_DT", index: "UPDATE_END_DT",align: "center",formatter: format.date, width: 160 }, //반영완료일자
+					{ name: "START_UPDATE_END_DAY", index: "START_UPDATE_END_DAY",align: "center", formatter: function(value, options, rowObject) { //개발시작>반영
+						if(rowObject.START_UPDATE_END_DAY == null){
+							return '';
+						}else{
+							return rowObject.START_UPDATE_END_DAY+' 일';	
+						}
+					}},
+					{ name: "REQ_UPDATE_END_DAY", index: "REQ_UPDATE_END_DAY",align: "center", formatter: function(value, options, rowObject) { //요청>반영
+						if(rowObject.REQ_UPDATE_END_DAY == null){
+							return '';
+						}else{
+							return rowObject.REQ_UPDATE_END_DAY+' 일';	
+						}
+					}},
+					{ name: "PROC_ADMIN_NM", index: "PROC_ADMIN_NM" , width: 100} //처리자
+				],
+				
+				//cmTemplate: { align: "center" },
+				autowidth: true,
+				height: 400,
+				viewrecords: true,
+				gridview: true,
+				rowNum: 20,
+				rownumbers: true,
+				pager: "#pager_T3",
+				rowList: [20, 50, 100, 200],
+				sortorder: "DESC",
+				sortname: "TASK_SEQ"
+			});
+
+			//
+			
+			// proc_state_cd multiselect
+			var multiselect = $("select[name=proc_state_cd]");
+			multiselect.find("option[value='']").remove();
+			multiselect.multiselect({
+				 selectedList: 5,
+				 height: "auto",
+				 minWidth : 300,
+				 noneSelectedText: "${defaultOptionText }"
+			}).on("multiselectbeforeopen", function() {
+				$(this).data("beforeValue", $(this).val());
+			}).on("multiselectclose", function() {
+				var $this = $(this);
+				//if (JSON.stringify($this.val()) !== JSON.stringify($this.data("beforeValue"))) {
+				if (($this.val() == null ? "" : $this.val().toString()) !== ($this.data("beforeValue") === null ? "" : $this.data("beforeValue").toString())) {								
+					goSearch_T1();					
+				}
+			});
+				 
+			$("#button-search_T1").on("click", goSearch_T1);
+			$("#button-excel_T1").on("click", goExcel1);
+			$("#button-reset_T1").on("click", goReset1);
+
+			
+			$("#button-search_T2").on("click", goSearch_T2);
+			$("#button-excel_T2").on("click", goExcel2);
+			$("#button-reset_T2").on("click", goReset2);
+
+			$("#button-search_T3").on("click", goSearch_T3);
+			$("#button-excel_T3").on("click", goExcel3);
+			$("#button-reset_T3").on("click", goReset3);
+			
+			$(".date").datepicker();
+			
+			// input enter event
+			//var $from = $("#formSearch_T1");
+			//$from.find(":input").on("keyup", function(event) {
+				//if (event.keyCode == 13) {
+					//goSearch_T1();
+				//}
+			//});
+
+
+			// select or radio event
+			//$from.find("select, input[type=radio]").filter(":not(.not-search)").on("change", goSearch_T1);
+			
+			// 등록일자 set
+			setFromToDate("1W", "seach_dt");
+			$("#seach_dt_period").on("change", function() {
+				setFromToDate(this.value, "seach_dt");				
+				goSearch_T1();	
+			}).val("1W");
+			
+			maskForm();			
+
+			$("#div_T1").show("","");
+			$("#div_T2").hide("","");
+			$("#div_T3").hide("","");
+
+			goSearch_T1();
+			goSearch_T2();
+			goSearch_T3();
+
+			
+
+			
+		});
+
+		/* 
+		function changeImportant(object, work_seq) {
+			var $obj = $(object);
+			var t = $obj.text();
+			var important_yn = t == "☆" ? "Y" : "N";
+			var text = t == "☆" ? "★" : "☆";
+			
+			$.ajax({
+				url: "/work/changeImportant.do",
+				data: "work_seq=" + work_seq + "&important_yn=" + important_yn,
+				cache: false
+			}).done(function() {
+				$obj.text(text);
+			});
+		} */
+		
+		function refreshMultiSelect(value) {
+			var multiselect = $("select[name=work_stat]"); 
+			var val = [];
+			multiselect.find("option[data-code_val1='" + value + "']").each(function() {
+				val.push(this.value);
+			});
+			multiselect.val(val).multiselect("refresh");
+			$(".ui-multiselect").css("width", "100%");
+		}
+		
+		function setFromToDate(type, targetName) {
+			var toDate = new Date();
+			var fromDate = new Date();
+				
+			switch (type) {
+			case "TD":	// 당일
+				fromDate.setDate(fromDate.getDate());
+				break;
+			case "YD":	// 전일
+				fromDate.setDate(fromDate.getDate() -1);
+				break;
+			case "1W":	// 주간
+				fromDate.setDate(fromDate.getDate() -7);
+				break;
+			case "1M":	// 월간
+				fromDate.setMonth(fromDate.getMonth() -1);
+				break;
+			case "TM":	// 당월
+				fromDate.setDate(1);
+				break;
+			case "LM":	// 전월
+			
+				// 전월 첫일 
+				fromDate.setMonth( fromDate.getMonth()-1);
+				fromDate.setDate(1); 
+				
+				// 전월 마지막일 
+				toDate.setMonth(toDate.getMonth());
+				toDate.setDate(0);
+				
+				break;
+			}
+
+			$("input[name=" + targetName + "_from]").val(getYearMonthDay("-", fromDate));
+			$("input[name=" + targetName + "_to]").val(getYearMonthDay("-", toDate));
+		}
+		
+		//등록 또는 상세조회
+		function openTaskReqView(task_seq) {
+			if(task_seq == null || task_seq == 'undefined') task_seq = '';
+			//location.href = "/taskreq/taskReqView.do?task_seq=" + task_seq || "";
+			window.open("/taskreq/taskReqView_test.do?task_seq=" + (task_seq || ""), "taskReqView", "top=110, left=110, width=1100, height=800, toolbar=0, status=0, resizable=1, scrollbars=1, location=1");
+		}
+
+		//등록 또는 상세조회
+		function openTaskIndicators(task_seq) {
+			window.open("/taskreq/taskIndicators.do", "openTaskPrint", "top=110, left=110, width=1100, height=800, toolbar=0, status=0, resizable=1, scrollbars=1, location=1");
+		}
+
+		function openTaskReqCheckerForm() {
+			if('${sessionScope.ss_user.checker}'!=""){
+				window.open("/taskreq/taskReqCheckerForm.do", "taskReqCheckerForm", "top=110, left=110, width=1100, height=800, toolbar=0, status=0, resizable=1, scrollbars=1, location=1");
+			}else{
+				alert("결재자 등록은 결재자만 가능합니다. 수정이 필요하시면 결재장에게 요청하세요");
+				}
+			
+			}
+		
+		//접숙등록
+		function taskReqListChgState(task_seq , req_user_nm , req_user_no, bef_proc_state_cd , rcpt_dt) {
+			unmaskForm();
+			//관리자만
+			if('${sessionScope.ss_user.role_cd}' =="09" || '${sessionScope.ss_user.role_cd}' =="08"){
+				var rcpt_admin_no ="";
+				var proc_admin_no ="";
+				var chg_id = '${sessionScope.ss_user.member_no}';
+				var member_no = req_user_no;
+				var member_ip = '${sessionScope.ss_user.member_ip}';
+				var update_end_dt_date =$("#update_end_dt_date").val();
+				var update_end_dt_hour =$("#update_end_dt_hour").val();
+				var update_end_dt_minute =$("#update_end_dt_minute").val();
+				var update_end_dt =update_end_dt_date+update_end_dt_hour+update_end_dt_minute+"00";
+				var settle_state_cd  ="006"; //결재진행상황 : 완료
+				var range_cd  ="099"; //업무처리구분 : 기타
+				var msg = "";
+				var proc_state_cd ="";
+				var direct009_Insert ="";
+				var range_cd = $("#range_cd").val();
+				
+				if(member_ip =="192.168.0.176"){ //김광진
+					rcpt_admin_no ="99923";
+					proc_admin_no ="99923";
+					
+				}else if(member_ip =="192.168.0.37"){ // 김법재
+					rcpt_admin_no ="99924";
+					proc_admin_no ="99924";
+					
+				}else if(member_ip =="192.168.0.81"){ // 이재훈
+					rcpt_admin_no ="99921";
+					proc_admin_no ="99921";
+					
+				}else if(member_ip =="127.0.0.1"){ // 테스트 김법재
+					rcpt_admin_no ="99924";
+					proc_admin_no ="99924";
+					
+				}else if(member_ip =="192.168.0.166"){ // 이우철
+					rcpt_admin_no ="99927";
+					proc_admin_no ="99927";
+					
+				}else if(member_ip =="192.168.0.50"){ // 정현아
+					rcpt_admin_no ="99925";
+					proc_admin_no ="99925";
+					
+				}else if(member_ip =="172.17.171.78"){ // 김법재(은행)
+					rcpt_admin_no ="202202";
+					proc_admin_no ="202202";
+					
+				}else if(member_ip =="192.168.0.185"){ // 황상혁
+					rcpt_admin_no ="99928";
+					proc_admin_no ="99928";
+					
+				}else if(member_ip =="192.168.0.75"){ // 유승윤
+					rcpt_admin_no ="99929";
+					proc_admin_no ="99929";
+					
+				}else if(member_ip =="192.168.0.120"){ // 박정현
+					rcpt_admin_no ="99930";
+					proc_admin_no ="99930";
+					
+				}else{
+					return alert("IP가 등록 되어 있지 않습니다.");
+				}
+
+				if(update_end_dt_date == null || update_end_dt_date == 'undefined') update_end_dt_date = '';
+				if(update_end_dt_hour == null || update_end_dt_hour == 'undefined') update_end_dt_hour = '';
+				if(update_end_dt_minute == null || update_end_dt_minute == 'undefined') update_end_dt_minute = '';
+				
+				if(bef_proc_state_cd =="000" ||bef_proc_state_cd =="010" ||bef_proc_state_cd =="014" ||bef_proc_state_cd =="015" ||bef_proc_state_cd =="016"){
+
+					if( range_cd =="" ){
+						return alert("처리구분을 선택해주세요.");
+					}
+					
+					if( update_end_dt_date =="" || update_end_dt_hour =="" ||
+							update_end_dt_minute =="" ){
+						
+						//초기화
+						$("#update_end_dt_date").val("");
+						$("#update_end_dt_hour").val("");
+						$("#update_end_dt_minute").val("");
+						
+						update_end_dt ="";
+						msg = "접수";
+						proc_state_cd="001";
+						direct009_Insert ="N";
+						
+					}else if( update_end_dt_date !="" && update_end_dt_hour !="" &&
+							update_end_dt_minute !="" ){
+						
+						msg = "운영배포완료";
+						proc_state_cd="009";
+						direct009_Insert ="Y";
+					}
+					
+				}else if(bef_proc_state_cd == "001"){
+					if( update_end_dt_date =="" || update_end_dt_hour =="" ||
+							update_end_dt_minute =="" ){
+						return alert("반영완료일자를 선택해주세요.");
+					}
+					
+					if(update_end_dt <= rcpt_dt){
+						return alert("반영완료일자가 접수일자 보다 더 이후 여야 합니다.");
+					}
+					
+					msg = "운영배포완료";
+					proc_state_cd="009";
+				}
+				
+				if(msg == ""){
+					alert("상태조건 오류");
+				}else{
+					 if( confirm("[ "+ req_user_nm+" ]님의 " + "요청번호 [ "+ task_seq+" ]을  "+msg+" 변경 하시겠습니까?")  ) {
+					  	$.ajax({
+							url: "/taskreq/taskReqListChgState.do",
+							type: "post",
+							data: {"task_seq": task_seq ,"rcpt_admin_no": rcpt_admin_no ,"proc_admin_no": proc_admin_no,"member_no": member_no,"chg_id": chg_id
+								,"bef_proc_state_cd" : bef_proc_state_cd,"proc_state_cd" : proc_state_cd, "req_user_no" : req_user_no ,"msg" : msg
+								,"update_end_dt" : update_end_dt ,"settle_state_cd" : settle_state_cd,"range_cd" : range_cd 
+								,"direct009_Insert" : direct009_Insert}
+						}).done(function() {
+							alert("처리되었습니다.");
+							//초기화
+							$("#range_cd").val("");
+							goSearch_T1();
+						}).fail(failReqListChgState);  
+					} 
+				}
+				
+				//초기화
+				$("#update_end_dt_date").val("");
+				$("#update_end_dt_hour").val("");
+				$("#update_end_dt_minute").val("");
+				
+			}else{
+				alert("관리자만 사용할 수 있는 기능입니다.");
+			}
+			
+			
+			
+			maskForm();
+		}
+
+		function failReqListChgState() {
+			alert("변경 실패 , 문자전송되는 로직이 있으니 에러확인 필수");
+		}
+		
+		function copyToClipboard(task_seq,req_title,req_user_nm) {
+			$("#copy_object").val("- " + task_seq+" / " +req_title+" / " +req_user_nm) //복사할 텍스트를 선택
+			$("#copy_object").select(); //복사할 텍스트를 선택
+		 	document.execCommand("copy"); //클립보드 복사 실행
+		}
+		
+		
+		function goSearch_T1() {
+			unmaskForm();
+
+			$("#tab_ul").children().each(function(){
+				if($(this).hasClass("active") == true){
+					$(this).attr("value");
+				}
+			});
+			
+			var data = $("#formSearch_T1").serializeObject();
+			maskForm();
+			var grid = $("#list_T1");
+			grid.setGridParam({
+				postData: "",
+				page: 1
+			});
+			grid.setGridParam({
+				url: "/taskreq/getTaskReqList.do",
+				datatype: "json",
+				postData: data
+			}).trigger("reloadGrid");
+		}
+
+		function goSearch_T2() {
+			unmaskForm();
+			$("#tablist2").val("T2");
+			$("#tab_ul").children().each(function(){
+				if($(this).hasClass("active") == true){
+					$(this).attr("value");//var값 data에 추가
+				}
+			});
+			
+			var data = $("#formSearch_T2").serializeObject();
+			maskForm();
+			var grid = $("#list_T2");
+			grid.setGridParam({
+				postData: "",
+				page: 1
+			});
+			grid.setGridParam({
+				url: "/taskreq/getTaskReqList.do",
+
+				datatype: "json",
+				postData: data
+			}).trigger("reloadGrid");
+		}
+
+		function goSearch_T3() {
+			unmaskForm();
+			$("#tablist3").val("T3");
+			$("#tab_ul").children().each(function(){
+				if($(this).hasClass("active") == true){
+					$(this).attr("value");//var값 data에 추가
+				}
+			});
+			
+			var data = $("#formSearch_T3").serializeObject();
+			//data += "&tablist=T3"; 
+			maskForm();
+			var grid = $("#list_T3");
+			grid.setGridParam({
+				postData: "",
+				page: 1
+			});
+			grid.setGridParam({
+				url: "/taskreq/getTaskReqList.do",
+
+				datatype: "json",
+				postData: data
+			}).trigger("reloadGrid");
+		}
+
+
+
+	//###########################################
+		function goExcel1() {
+			var postData = $("#list_T1").getGridParam("postData");
+			var frm = $("#formSearch_T1").get(0);
+			frm.target = "ifr_cd";
+			frm.method = "post";
+			frm.action = "/taskreq/taskReqListExcel.do"
+			
+			unmaskForm();
+			frm.submit();
+			maskForm();
+		}
+		function goExcel2() {
+			var postData = $("#list_T2").getGridParam("postData");
+			var frm = $("#formSearch_T2").get(0);
+			frm.target = "ifr_cd";
+			frm.method = "post";
+			frm.action = "/taskreq/taskReqListExcel.do"
+			
+			unmaskForm();
+			frm.submit();
+			maskForm();
+		}
+		function goExcel3() {
+			var postData = $("#list_T3").getGridParam("postData");
+			var frm = $("#formSearch_T3").get(0);
+			frm.target = "ifr_cd";
+			frm.method = "post";
+			frm.action = "/taskreq/taskReqListExcel.do"
+			
+			unmaskForm();
+			frm.submit();
+			maskForm();
+		}
+		 
+		function goReset1() {
+	    	$("#formSearch_T1").each(function(){
+	    		this.reset();	
+	    	});	 
+	    	
+	    	// 등록일자 set
+			setFromToDate("1W", "seach_dt");
+			$("#seach_dt_period").on("change", function() {
+				setFromToDate(this.value, "seach_dt");
+				goSearch_T1();					
+			}).val("1W");
+		}
+
+		function goReset2() {//2
+	    	$("#formSearch_T2").each(function(){
+	    		this.reset();	
+	    	});	 
+	    	
+	    	// 등록일자 set
+			setFromToDate("1W", "seach_dt");
+			$("#seach_dt_period").on("change", function() {
+				setFromToDate(this.value, "seach_dt");
+				goSearch_T2();					
+			}).val("1W");
+		}
+
+		function goReset3() {//3
+	    	$("#formSearch_T3").each(function(){
+	    		this.reset();	
+	    	});	 
+	    	
+	    	// 등록일자 set
+			setFromToDate("1W", "seach_dt");
+			$("#seach_dt_period").on("change", function() {
+				setFromToDate(this.value, "seach_dt");
+				goSearch_T3();					
+			}).val("1W");
+		}
+		 
+		function getYearMonthDay(div, date) {
+			div = div || "";
+			date = date || new Date();
+			
+			return date.getFullYear()
+				+ div + (date.getMonth() + 1 > 9 ? date.getMonth() + 1 : "0" + (date.getMonth() + 1))
+				+ div + (date.getDate() > 9 ? date.getDate() : "0" + date.getDate());
+		}
+		
+		function maskForm() {
+			$(".date").mask("0000-00-00");
+		}
+		
+		function unmaskForm() {
+			$(".date").unmask();
+		}
+		
+		//반영완료일자
+		$("#update_end_dt_hour").on("change", function() {	
+			$("#update_end_dt_minute").val("00");
+		});
+
+
+		$("#T1").click(function(){
+			  $("#T2").removeClass("active");
+			  $("#T3").removeClass("active");
+			  $(this).addClass("active");
+			  $("#div_T1").show("","");
+			  $("#div_T2").hide("","");
+			  $("#div_T3").hide("","");
+		});
+
+		$("#T2").click(function(){
+			if(${sessionScope.ss_user.checker == null}){
+				return alert("결재자만 접근 가능합니다.");
+				}else{
+			  $("#T1").removeClass("active");
+			  $("#T3").removeClass("active");
+			  $(this).addClass("active");
+			  $("#div_T2").show("","");
+			  $("#div_T1").hide("","");
+			  $("#div_T3").hide("","");
+				}
+		});
+
+		$("#T3").click(function(){
+			if(${sessionScope.ss_user.checker == null}){
+				return alert("결재자만 접근 가능합니다.");
+				}else{
+			  $("#T1").removeClass("active");
+			  $("#T2").removeClass("active");
+			  $(this).addClass("active");
+			  $("#div_T3").show("","");
+			  $("#div_T1").hide("","");
+			  $("#div_T2").hide("","");}
+		});
+		
+	</script>
+	<iframe name="ifr_cd" src="" width="0" scrolling="no" height="0" frameborder=0></iframe>
+</body>
+</html>
